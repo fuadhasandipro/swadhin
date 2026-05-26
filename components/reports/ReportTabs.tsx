@@ -25,7 +25,7 @@ export function ReportTabs({ sales, cash, stock, customers, salary }: ReportTabs
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex flex-wrap bg-slate-100 dark:bg-[#0f1a0f] p-1 rounded-xl w-fit print:hidden border border-emerald-900/10 gap-1">
+      <div className="flex overflow-x-auto whitespace-nowrap bg-slate-100 dark:bg-[#0f1a0f] p-1 rounded-xl w-full md:w-fit print:hidden border border-emerald-900/10 gap-1 scrollbar-none">
         {tabs.map(tab => (
           <button
             key={tab.id}

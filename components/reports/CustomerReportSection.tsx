@@ -55,38 +55,57 @@ export function CustomerReportSection({ data }: CustomerReportProps) {
           <CardTitle className="text-base font-medium">Top Debtors (Customers who owe money)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Balance Due (৳)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.topDebtors.length === 0 ? (
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                      No debtors found.
-                    </TableCell>
+                    <TableHead>Customer Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="text-right">Balance Due (৳)</TableHead>
                   </TableRow>
-                ) : (
-                  data.topDebtors.map(customer => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell className="truncate max-w-[200px]">{customer.address || '-'}</TableCell>
-                      <TableCell className="text-right text-emerald-600 font-bold">
-                        {Number(customer.balance_amount).toLocaleString()}
+                </TableHeader>
+                <TableBody>
+                  {data.topDebtors.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        No debtors found.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    data.topDebtors.map(customer => (
+                      <TableRow key={customer.id}>
+                        <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell>{customer.phone}</TableCell>
+                        <TableCell className="truncate max-w-[200px]">{customer.address || '-'}</TableCell>
+                        <TableCell className="text-right text-emerald-600 font-bold">
+                          {Number(customer.balance_amount).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            <div className="md:hidden space-y-3">
+              {data.topDebtors.length === 0 ? (
+                <p className="text-center py-6 text-muted-foreground text-sm">No debtors found.</p>
+              ) : (
+                data.topDebtors.map(customer => (
+                  <div key={customer.id} className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-1">
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold text-sm">{customer.name}</p>
+                      <p className="text-emerald-600 font-bold text-sm">৳{Number(customer.balance_amount).toLocaleString()}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                    {customer.address && <p className="text-xs text-muted-foreground truncate">{customer.address}</p>}
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         </CardContent>
       </Card>
     </section>

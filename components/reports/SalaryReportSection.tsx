@@ -41,34 +41,57 @@ export function SalaryReportSection({ data }: SalaryReportProps) {
           <CardTitle className="text-base font-medium">Employee Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee Name</TableHead>
-                  <TableHead className="text-right">Paid Amount (৳)</TableHead>
-                  <TableHead className="text-right">Due Amount (৳)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.employeeBreakdown.length === 0 ? (
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
-                      No salary records found for this period.
-                    </TableCell>
+                    <TableHead>Employee Name</TableHead>
+                    <TableHead className="text-right">Paid Amount (৳)</TableHead>
+                    <TableHead className="text-right">Due Amount (৳)</TableHead>
                   </TableRow>
-                ) : (
-                  data.employeeBreakdown.map((emp, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{emp.name}</TableCell>
-                      <TableCell className="text-right text-emerald-600">{emp.paid.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-red-500">{emp.due.toLocaleString()}</TableCell>
+                </TableHeader>
+                <TableBody>
+                  {data.employeeBreakdown.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                        No salary records found for this period.
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    data.employeeBreakdown.map((emp, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{emp.name}</TableCell>
+                        <TableCell className="text-right text-emerald-600">{emp.paid.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-red-500">{emp.due.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="md:hidden space-y-3">
+              {data.employeeBreakdown.length === 0 ? (
+                <p className="text-center py-6 text-muted-foreground text-sm">No salary records found for this period.</p>
+              ) : (
+                data.employeeBreakdown.map((emp, index) => (
+                  <div key={index} className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-2">
+                    <p className="font-semibold text-sm">{emp.name}</p>
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Paid</p>
+                        <p className="text-sm font-medium text-emerald-600">৳{emp.paid.toLocaleString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Due</p>
+                        <p className="text-sm font-medium text-red-500">৳{emp.due.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         </CardContent>
       </Card>
     </section>

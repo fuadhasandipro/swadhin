@@ -81,9 +81,9 @@ export function DateRangeSelector() {
   const active = currentType();
 
   return (
-    <Card className="sticky top-0 z-10 bg-white/80 dark:bg-[#0a0f0a]/80 backdrop-blur-md border-emerald-900/20 shadow-sm print:hidden">
+    <Card className="bg-white/80 dark:bg-[#0a0f0a]/80 backdrop-blur-md border-emerald-900/20 shadow-sm print:hidden">
       <CardContent className="p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex justify-center md:justify-start items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 scrollbar-none">
           <Button 
             variant={active === "today" ? "default" : "outline"} 
             size="sm" 
@@ -118,7 +118,7 @@ export function DateRangeSelector() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-hidden">
           <CalendarIcon className="w-4 h-4 text-emerald-600" />
           <Input 
             type="date" 
