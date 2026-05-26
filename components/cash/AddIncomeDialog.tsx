@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "react-hot-toast";
 
 const incomeSchema = z.object({
@@ -35,7 +34,7 @@ export function AddIncomeDialog({
 
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(incomeSchema),
-    defaultValues: { amount: undefined, category: "sale", description: "", date: new Date().toISOString().split('T')[0] }
+    defaultValues: { amount: undefined, category: "other", description: "", date: new Date().toISOString().split('T')[0] }
   });
 
   const category = watch("category");
@@ -95,19 +94,12 @@ export function AddIncomeDialog({
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select 
-              value={category} 
-              onValueChange={(v: any) => setValue("category", v, { shouldValidate: true })}
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              {...register("category")}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sale">Sale</SelectItem>
-                <SelectItem value="collection">Collection (Other)</SelectItem>
-                <SelectItem value="other">Other Income</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="other">Other Income</option>
+            </select>
             {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
           </div>
 

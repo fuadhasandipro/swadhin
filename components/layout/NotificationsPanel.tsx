@@ -5,7 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Product } from '@/types';
+import { Product, Order } from '@/types';
+import { PackageSearch, CheckCircle2 } from 'lucide-react';
+
+type NotificationItem = {
+  id: string;
+  type: 'low_stock' | 'ready_delivery' | 'waiting_design';
+  title: string;
+  description: string;
+  timestamp?: string;
+};
 
 export function NotificationsPanel({
   isOpen,
@@ -16,18 +25,69 @@ export function NotificationsPanel({
 }) {
   const supabase = createClient();
 
-  const { data: lowStockProducts, isLoading } = useQuery({
-    queryKey: ['low-stock-notifications'],
+  const { data: notifications, isLoading } = useQuery({
+    queryKey: ['system-notifications'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const items: NotificationItem[] = [];
+
+      // 1. Low Stock
+      const { data: lowStock } = await supabase
         .from('products')
         .select('*')
         .lt('qty', 10);
       
-      if (error) throw error;
-      return data as Product[];
+      if (lowStock) {
+        lowStock.forEach(p => {
+          items.push({
+            id: `stock-${p.id}`,
+            type: 'low_stock',
+            title: `Low Stock: ${p.bag_size}`,
+            description: `Only ${p.qty} pcs remaining.`,
+          });
+        });
+      }
+
+      // 2. Ready for Delivery Orders
+      const { data: readyOrders } = await supabase
+        .from('orders')
+        .select('id, created_at, customer_id')
+        .eq('status', 'ready_delivery')
+        .order('created_at', { ascending: false });
+
+      if (readyOrders) {
+        readyOrders.forEach(o => {
+          items.push({
+            id: `ready-${o.id}`,
+            type: 'ready_delivery',
+            title: `Ready for Delivery`,
+            description: `Order #${o.id.split('-')[0].toUpperCase()} is ready for delivery.`,
+            timestamp: o.created_at,
+          });
+        });
+      }
+
+      // 3. Waiting Design Confirmation
+      const { data: designOrders } = await supabase
+        .from('orders')
+        .select('id, created_at')
+        .eq('status', 'design_waiting_confirmation')
+        .order('created_at', { ascending: false });
+
+      if (designOrders) {
+        designOrders.forEach(o => {
+          items.push({
+            id: `design-${o.id}`,
+            type: 'waiting_design',
+            title: `Action Required`,
+            description: `Order #${o.id.split('-')[0].toUpperCase()} is waiting for design confirmation.`,
+            timestamp: o.created_at,
+          });
+        });
+      }
+
+      return items;
     },
-    refetchInterval: 300000, // 5 mins
+    staleTime: 60000,
   });
 
   return (
@@ -63,16 +123,39 @@ export function NotificationsPanel({
                 <div className="text-center text-emerald-600 font-sans mt-10 animate-pulse">
                   লোড হচ্ছে...
                 </div>
-              ) : lowStockProducts && lowStockProducts.length > 0 ? (
-                lowStockProducts.map((product) => (
-                  <div key={product.id} className="p-3 bg-red-950/20 border border-red-900/50 rounded-xl flex items-start gap-3">
-                    <div className="bg-red-900/30 p-2 rounded-lg text-red-400 mt-0.5">
-                      <AlertTriangle size={18} />
+              ) : notifications && notifications.length > 0 ? (
+                notifications.map((notif) => (
+                  <div 
+                    key={notif.id} 
+                    className={`p-3 border rounded-xl flex items-start gap-3
+                      ${notif.type === 'low_stock' ? 'bg-red-950/20 border-red-900/50' : ''}
+                      ${notif.type === 'ready_delivery' ? 'bg-blue-950/20 border-blue-900/50' : ''}
+                      ${notif.type === 'waiting_design' ? 'bg-amber-950/20 border-amber-900/50' : ''}
+                    `}
+                  >
+                    <div className={`p-2 rounded-lg mt-0.5
+                      ${notif.type === 'low_stock' ? 'bg-red-900/30 text-red-400' : ''}
+                      ${notif.type === 'ready_delivery' ? 'bg-blue-900/30 text-blue-400' : ''}
+                      ${notif.type === 'waiting_design' ? 'bg-amber-900/30 text-amber-400' : ''}
+                    `}>
+                      {notif.type === 'low_stock' && <AlertTriangle size={18} />}
+                      {notif.type === 'ready_delivery' && <CheckCircle2 size={18} />}
+                      {notif.type === 'waiting_design' && <PackageSearch size={18} />}
                     </div>
                     <div>
-                      <h3 className="font-sans font-medium text-red-400">Low Stock: {product.bag_size}</h3>
-                      <p className="text-red-300/70 text-sm mt-1 font-sans">
-                          Only <span className="font-bold text-red-400">{product.qty} pcs</span> remaining.
+                      <h3 className={`font-sans font-medium 
+                        ${notif.type === 'low_stock' ? 'text-red-400' : ''}
+                        ${notif.type === 'ready_delivery' ? 'text-blue-400' : ''}
+                        ${notif.type === 'waiting_design' ? 'text-amber-400' : ''}
+                      `}>
+                        {notif.title}
+                      </h3>
+                      <p className={`text-sm mt-1 font-sans
+                        ${notif.type === 'low_stock' ? 'text-red-300/70' : ''}
+                        ${notif.type === 'ready_delivery' ? 'text-blue-300/70' : ''}
+                        ${notif.type === 'waiting_design' ? 'text-amber-300/70' : ''}
+                      `}>
+                        {notif.description}
                       </p>
                     </div>
                   </div>
@@ -95,17 +178,18 @@ export function NotificationBell({ onClick }: { onClick: () => void }) {
   const supabase = createClient();
 
   const { data: count } = useQuery({
-    queryKey: ['low-stock-count'],
+    queryKey: ['system-notifications-count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .lt('qty', 10);
-      
-      if (error) throw error;
-      return count || 0;
+      let total = 0;
+
+      const { count: stockCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).lt('qty', 10);
+      const { count: readyCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'ready_delivery');
+      const { count: designCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'design_waiting_confirmation');
+
+      total += (stockCount || 0) + (readyCount || 0) + (designCount || 0);
+      return total;
     },
-    refetchInterval: 60000, // 1 minute
+    staleTime: 60000,
   });
 
   return (

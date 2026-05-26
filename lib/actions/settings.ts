@@ -58,8 +58,13 @@ export async function getPrintColorConfigs() {
 }
 
 export async function addPrintColorConfig(name: string, colors: string[]) {
-  const adminProfile = await getCurrentProfile();
-  if (!adminProfile || adminProfile.role !== 'admin') throw new Error("Unauthorized");
+  const profile = await getCurrentProfile();
+  if (!profile) throw new Error("Unauthorized");
+  
+  const isOrderManager = profile.role === 'manager' && 
+    (Array.isArray(profile.privileges) ? profile.privileges.includes('order_manager') : (profile.privileges as any)?.order_manager === true);
+    
+  if (profile.role !== 'admin' && !isOrderManager) throw new Error("Unauthorized");
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -69,10 +74,66 @@ export async function addPrintColorConfig(name: string, colors: string[]) {
   if (error) throw new Error(error.message);
 
   await logActivity(supabase, {
-    userId: adminProfile.id,
+    userId: profile.id,
     action: 'CREATE_PRINT_CONFIG',
     entityType: 'print_color_configs',
     details: { name, colors }
+  });
+
+  return { success: true };
+}
+
+export async function updatePrintColorConfig(id: string, name: string, colors: string[]) {
+  const profile = await getCurrentProfile();
+  if (!profile) throw new Error("Unauthorized");
+  
+  const isOrderManager = profile.role === 'manager' && 
+    (Array.isArray(profile.privileges) ? profile.privileges.includes('order_manager') : (profile.privileges as any)?.order_manager === true);
+    
+  if (profile.role !== 'admin' && !isOrderManager) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('print_color_configs')
+    .update({ name, colors })
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'UPDATE_PRINT_CONFIG',
+    entityType: 'print_color_configs',
+    entityId: id,
+    details: { name, colors }
+  });
+
+  return { success: true };
+}
+
+export async function deletePrintColorConfig(id: string) {
+  const profile = await getCurrentProfile();
+  if (!profile) throw new Error("Unauthorized");
+  
+  const isOrderManager = profile.role === 'manager' && 
+    (Array.isArray(profile.privileges) ? profile.privileges.includes('order_manager') : (profile.privileges as any)?.order_manager === true);
+    
+  if (profile.role !== 'admin' && !isOrderManager) throw new Error("Unauthorized");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('print_color_configs')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'DELETE_PRINT_CONFIG',
+    entityType: 'print_color_configs',
+    entityId: id,
+    details: { id }
   });
 
   return { success: true };

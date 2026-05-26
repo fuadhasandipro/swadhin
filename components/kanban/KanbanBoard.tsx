@@ -143,8 +143,8 @@ export function KanbanBoard() {
 
       {/* Board */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
-          <div className="flex flex-row md:flex-row gap-4 h-full min-w-max px-1">
+        <div className="flex-1 overflow-y-auto md:overflow-y-hidden md:overflow-x-auto pb-4 custom-scrollbar">
+          <div className="flex flex-col md:flex-row gap-4 md:h-full md:w-max px-1">
             {COLUMNS.map(col => (
               <KanbanColumn 
                 key={col.status}

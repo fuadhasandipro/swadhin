@@ -7,10 +7,10 @@ export default async function CreateOrderPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-heading font-bold text-emerald-400">
+        <h1 className="text-3xl font-heading font-bold text-slate-800 dark:text-emerald-100">
           {t("newOrder")}
         </h1>
-        <p className="text-emerald-300/70">Fill out the details to create a new order.</p>
+        <p className="text-sm text-slate-500 dark:text-emerald-500/70 mt-1">Fill out the details to create a new order.</p>
       </div>
 
       <CreateOrderForm />

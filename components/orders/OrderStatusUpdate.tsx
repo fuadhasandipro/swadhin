@@ -49,9 +49,9 @@ export function OrderStatusUpdate({
   const currentIndex = ORDER_STATUS_FLOW.indexOf(currentStatus);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
       <Select value={status} onValueChange={(v: any) => setStatus(v)} disabled={loading}>
-        <SelectTrigger className="w-[220px]">
+        <SelectTrigger className="w-full sm:w-[220px] h-11 sm:h-10">
           <SelectValue placeholder="Select Status" />
         </SelectTrigger>
         <SelectContent>
@@ -71,7 +71,8 @@ export function OrderStatusUpdate({
         <Button 
           onClick={handleUpdate} 
           disabled={loading}
-          size="sm"
+          size="default"
+          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white shadow-md sm:shadow-none h-11 sm:h-10"
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {loading ? "Updating..." : t("detail.changeStatus")}

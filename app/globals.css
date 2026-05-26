@@ -130,3 +130,30 @@
     @apply font-sans;
   }
 }
+
+/* React Select Dark Mode Overrides */
+.react-select__control {
+  @apply bg-background border-input !important;
+}
+.react-select__control--is-focused {
+  @apply border-ring ring-1 ring-ring !important;
+  box-shadow: none !important;
+}
+.react-select__menu {
+  @apply bg-background border border-border shadow-md z-50 !important;
+}
+.react-select__option {
+  @apply text-foreground bg-background !important;
+}
+.react-select__option--is-focused {
+  @apply bg-muted !important;
+}
+.react-select__option--is-selected {
+  @apply bg-primary text-primary-foreground !important;
+}
+.react-select__single-value {
+  @apply text-foreground !important;
+}
+.react-select__input-container {
+  @apply text-foreground !important;
+}

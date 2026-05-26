@@ -23,13 +23,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 const primaryItems = [
   { href: '/dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard, id: 'dashboard' },
   { href: '/orders', label: 'অর্ডার', icon: PackageSearch, id: 'orders' },
-  { href: '/kanban', label: 'কানবান', icon: Kanban, id: 'kanban' },
+  { href: '/stock', label: 'স্টক', icon: Layers, id: 'stock' },
   { href: '/cash', label: 'নগদ', icon: Banknote, id: 'cash' },
 ];
 
 const secondaryItems = [
+  { href: '/kanban', label: 'কানবান', icon: Kanban, id: 'kanban' },
   { href: '/customers', label: 'গ্রাহক', icon: Users, id: 'customers' },
-  { href: '/stock', label: 'স্টক', icon: Layers, id: 'stock' },
   { href: '/reports', label: 'রিপোর্ট', icon: BarChart3, id: 'reports' },
   { href: '/salary', label: 'বেতন', icon: Wallet, id: 'salary' },
   { href: '/activity', label: 'লগ', icon: History, id: 'activity' },

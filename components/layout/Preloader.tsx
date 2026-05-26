@@ -24,7 +24,7 @@ export default function Preloader() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0a0f0a]"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-[#0a0f0a]"
         >
           <div className="relative flex items-center justify-center">
             {/* Ripple rings */}
@@ -44,22 +44,22 @@ export default function Preloader() {
             ))}
             
             {/* Logo image */}
-            <div className="z-10 bg-[#0a0f0a] rounded-full p-4 relative flex items-center justify-center w-24 h-24">
+            <div className="z-10 bg-white dark:bg-[#0a0f0a] rounded-full p-4 relative flex items-center justify-center w-24 h-24">
               <Image 
                 src="/next.svg" 
                 alt="Swadhin Enterprise Logo" 
                 width={80} 
                 height={80} 
-                className="invert" 
+                className="dark:invert" 
               />
             </div>
           </div>
           
           <div className="mt-8 flex flex-col items-center z-10">
-            <h1 className="text-3xl font-bold text-white font-heading">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">
               Swadhin Enterprise
             </h1>
-            <p className="text-emerald-400 mt-2 text-lg font-sans">
+            <p className="text-emerald-600 dark:text-emerald-400 mt-2 text-lg font-sans">
               নন-ওভেন ব্যাগ প্রিন্ট
             </p>
           </div>

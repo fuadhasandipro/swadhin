@@ -27,7 +27,7 @@ export function KanbanColumn({ status, title, orders, onCardClick }: KanbanColum
   }
 
   return (
-    <div className="flex flex-col shrink-0 w-full md:w-72 bg-slate-50/50 dark:bg-[#0a0f0a]/50 rounded-xl border border-slate-200/50 dark:border-emerald-900/30 h-full max-h-full overflow-hidden transition-colors">
+    <div className="flex flex-col shrink-0 w-full md:w-72 bg-slate-50/50 dark:bg-[#0a0f0a]/50 rounded-xl border border-slate-200/50 dark:border-emerald-900/30 min-h-[150px] max-h-[50vh] md:h-full md:max-h-full overflow-hidden transition-colors">
       
       {/* Column Header */}
       <div className={`px-4 py-3 border-b backdrop-blur-sm flex justify-between items-center shrink-0 ${headerColor}`}>

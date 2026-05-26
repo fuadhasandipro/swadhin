@@ -52,10 +52,10 @@ export default async function OrdersPage({
           </h1>
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Link href="/orders/create">
-          <Button className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap shadow-sm">
+        <Link href="/orders/create" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white">
             <Plus size={18} />
-            <span className="hidden sm:inline">{t("newOrder")}</span>
+            <span>{t("newOrder")}</span>
           </Button>
         </Link>
       </div>
@@ -101,55 +101,108 @@ export default async function OrdersPage({
             No orders found.
           </div>
         ) : (
-          <div className="rounded-xl border overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold">{t("columns.id")}</TableHead>
-                  <TableHead className="font-semibold">{t("columns.customer")}</TableHead>
-                  <TableHead className="font-semibold">{t("columns.date")}</TableHead>
-                  <TableHead className="font-semibold">{t("columns.status")}</TableHead>
-                  <TableHead className="font-semibold text-right">{t("columns.total")}</TableHead>
-                  <TableHead className="font-semibold text-center">{t("columns.action")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order: any) => (
-                  <TableRow
-                    key={order.id}
-                    className="border-b transition-colors"
-                  >
-                    <TableCell className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      {order.id.split("-")[0]}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {order.customer?.name}
-                      <div className="text-xs text-muted-foreground font-normal">{order.customer?.phone}</div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(order.order_date), "PP")}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-right font-bold">
-                      ৳{Number(order.total_amount).toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Link href={`/orders/${order.id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors h-auto"
-                        >
-                          <Eye className="h-4 w-4 mr-1 hidden sm:inline" />
-                          View
-                        </Button>
-                      </Link>
-                    </TableCell>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="font-semibold">{t("columns.id")}</TableHead>
+                    <TableHead className="font-semibold">{t("columns.customer")}</TableHead>
+                    <TableHead className="font-semibold">{t("columns.date")}</TableHead>
+                    <TableHead className="font-semibold">{t("columns.status")}</TableHead>
+                    <TableHead className="font-semibold text-right">{t("columns.total")}</TableHead>
+                    <TableHead className="font-semibold text-center">{t("columns.action")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order: any) => (
+                    <TableRow
+                      key={order.id}
+                      className="border-b transition-colors"
+                    >
+                      <TableCell className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        {order.id.split("-")[0]}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {order.customer?.name}
+                        <div className="text-xs text-muted-foreground font-normal">{order.customer?.phone}</div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {format(new Date(order.order_date), "PP")}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell className="text-right font-bold">
+                        ৳{Number(order.total_amount).toLocaleString('en-IN')}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Link href={`/orders/${order.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors h-auto"
+                          >
+                            <Eye className="h-4 w-4 mr-1 hidden sm:inline" />
+                            View
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-4 md:hidden px-4 pb-4">
+              {orders.map((order: any) => (
+                <div key={order.id} className="bg-card border rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1 flex items-center gap-2">
+                        #{order.id.split("-")[0]}
+                        <span className="text-xs font-normal text-slate-500 dark:text-slate-400 border-l pl-2 border-slate-200 dark:border-slate-700">
+                          {format(new Date(order.order_date), "dd MMM yyyy")}
+                        </span>
+                      </div>
+                      <div className="font-bold text-slate-800 dark:text-slate-100">{order.customer?.name}</div>
+                      <div className="text-xs text-muted-foreground">{order.customer?.phone}</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {getStatusBadge(order.status)}
+                      <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/50">
+                        Del: {format(new Date(order.delivery_date), "dd MMM")}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[11px] flex flex-wrap gap-x-3 gap-y-1.5 text-slate-600 dark:text-emerald-200/80 border border-slate-100 dark:border-emerald-900/30">
+                    <div className="flex items-center gap-1"><span className="text-slate-400">Color:</span> <span className="font-medium">{order.body_color || '-'}</span></div>
+                    <div className="flex items-center gap-1"><span className="text-slate-400">Print:</span> <span className="font-medium">{order.print_color_config?.color || (typeof order.print_color_config === 'string' ? order.print_color_config : '') || '-'}</span></div>
+                    <div className="flex items-center gap-1"><span className="text-slate-400">Type:</span> <span className="font-medium">{order.cutting_type === 'handle' ? 'Handle' : 'D-Cut'}</span></div>
+                    {order.cutting_type === 'handle' && (
+                      <div className="flex items-center gap-1"><span className="text-slate-400">Handle:</span> <span className="font-medium">{order.handle_color || '-'}</span></div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between items-end mt-2 pt-3 border-t border-border/50">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
+                      <div className="font-bold text-lg text-slate-800 dark:text-slate-100">
+                        ৳{Number(order.total_amount).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                    <Link href={`/orders/${order.id}`}>
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-5">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
         </CardContent>
       </Card>

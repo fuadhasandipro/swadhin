@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ReactSelect from 'react-select';
 import { toast } from "react-hot-toast";
 
 const collectionSchema = z.object({
@@ -21,18 +21,19 @@ const collectionSchema = z.object({
 
 type FormValues = z.infer<typeof collectionSchema>;
 
-export function CustomerCollectionQuickEntry({ 
-  isOpen, 
+export function CustomerCollectionQuickEntry({
+  isOpen,
   onClose,
   onSuccess
-}: { 
-  isOpen: boolean; 
+}: {
+  isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(collectionSchema),
@@ -41,7 +42,7 @@ export function CustomerCollectionQuickEntry({
 
   const selectedCustomerId = watch("customerId");
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-  
+
   const maxCollection = selectedCustomer ? Math.abs(Number(selectedCustomer.balance)) : 0;
 
   useEffect(() => {
@@ -98,32 +99,39 @@ export function CustomerCollectionQuickEntry({
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col">
             <Label>Select Customer (With Dues)</Label>
-            <Select 
-              value={selectedCustomerId} 
-              onValueChange={(v: any) => setValue("customerId", v, { shouldValidate: true })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={loadingCustomers ? "Loading..." : "Select Customer"} />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px] w-full min-w-[var(--radix-select-trigger-width)]">
-                {customers.map(c => {
+            <ReactSelect
+              options={customers.map(c => {
+                const bal = Number(c.balance);
+                const isOwed = bal < 0;
+                return {
+                  value: c.id,
+                  label: `${c.name} ${isOwed ? `(Due: ৳${Math.abs(bal).toLocaleString()})` : `(Balance: ৳${bal.toLocaleString()})`}`
+                };
+              })}
+              value={selectedCustomerId ? {
+                value: selectedCustomerId,
+                label: (() => {
+                  const c = customers.find(x => x.id === selectedCustomerId);
+                  if (!c) return "";
                   const bal = Number(c.balance);
                   const isOwed = bal < 0;
-                  return (
-                    <SelectItem key={c.id} value={c.id}>
-                      <div className="flex items-center justify-between w-full pr-2">
-                        <span className="font-medium truncate mr-4">{c.name}</span>
-                        <span className={`text-xs whitespace-nowrap ${isOwed ? 'text-red-500 font-semibold' : 'text-slate-500'}`}>
-                          {isOwed ? `Due: ৳${Math.abs(bal).toLocaleString()}` : `Bal: ৳${bal.toLocaleString()}`}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+                  return `${c.name} ${isOwed ? `(Due: ৳${Math.abs(bal).toLocaleString()})` : `(Balance: ৳${bal.toLocaleString()})`}`;
+                })()
+              } : null}
+              onChange={(option: any) => {
+                setValue("customerId", option?.value || "", { shouldValidate: true });
+              }}
+              isLoading={loadingCustomers}
+              isClearable
+              placeholder="Search customers by name..."
+              className="text-sm react-select-container"
+              classNamePrefix="react-select"
+              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+              menuPosition="fixed"
+              styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+            />
             {errors.customerId && <p className="text-red-500 text-xs">{errors.customerId.message}</p>}
           </div>
 

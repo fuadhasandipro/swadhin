@@ -82,19 +82,19 @@ export function CustomerProfileTabs({
               <p className="text-center text-slate-500 py-10">No orders found.</p>
             ) : (
               orders.map(order => (
-                <div key={order.id} className="flex justify-between items-center p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors">
+                <div key={order.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors gap-3 sm:gap-0">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-bold text-slate-800 dark:text-emerald-100">Order #{order.id.slice(0, 8)}</p>
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full border", getStatusColor(order.status))}>
+                      <p className="font-bold text-sm sm:text-base text-slate-800 dark:text-emerald-100">Order #{order.id.slice(0, 8)}</p>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap", getStatusColor(order.status))}>
                         {td(`orderStatus.${order.status}`)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(order.order_date), 'MMM dd, yyyy')} • {order.qty} pcs</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(order.order_date), 'MMM dd, yyyy')} • {order.qty} pcs</p>
                   </div>
-                  <div className="text-right flex flex-col items-end">
+                  <div className="flex sm:flex-col justify-between items-center sm:items-end w-full sm:w-auto pt-2 border-t sm:border-t-0 sm:pt-0">
                     <p className="font-bold text-emerald-600 dark:text-emerald-400">৳{order.total_amount.toLocaleString('en-IN')}</p>
-                    <Link href={`/orders`} className="text-xs text-emerald-500 hover:text-emerald-600 flex items-center mt-1">
+                    <Link href={`/orders`} className="text-xs text-emerald-500 hover:text-emerald-600 flex items-center bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md sm:bg-transparent sm:px-0 sm:py-0 mt-0 sm:mt-1">
                       View <ArrowRight size={12} className="ml-1"/>
                     </Link>
                   </div>
@@ -111,16 +111,17 @@ export function CustomerProfileTabs({
               <p className="text-center text-slate-500 py-10">No transactions found.</p>
             ) : (
               transactions.map(tx => (
-                <div key={tx.id} className="flex justify-between items-center p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors">
+                <div key={tx.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors gap-2 sm:gap-0">
                   <div>
-                    <p className="font-bold text-slate-800 dark:text-emerald-100">{tx.description || "Balance Adjustment"}</p>
-                    <p className="text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(tx.created_at), 'MMM dd, yyyy hh:mm a')} • {tx.order_id ? `Order #${tx.order_id.slice(0, 8)}` : 'Manual'}</p>
+                    <p className="font-bold text-sm sm:text-base text-slate-800 dark:text-emerald-100">{tx.description || "Balance Adjustment"}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(tx.created_at), 'MMM dd, yyyy hh:mm a')} • {tx.order_id ? `Order #${tx.order_id.slice(0, 8)}` : 'Manual'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className={cn("font-bold", tx.type === 'credit' ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400")}>
+                  <div className="flex sm:flex-col justify-between items-center sm:items-end w-full sm:w-auto pt-2 border-t sm:border-t-0 sm:pt-0">
+                    <p className="text-[10px] text-slate-500 uppercase sm:hidden">{tx.type}</p>
+                    <p className={cn("font-bold text-sm sm:text-base", tx.type === 'credit' ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400")}>
                       {tx.type === 'credit' ? '+' : '-'} ৳{tx.amount.toLocaleString('en-IN')}
                     </p>
-                    <p className="text-[10px] text-slate-500 uppercase">{tx.type}</p>
+                    <p className="text-[10px] text-slate-500 uppercase hidden sm:block">{tx.type}</p>
                   </div>
                 </div>
               ))
@@ -135,19 +136,20 @@ export function CustomerProfileTabs({
               <p className="text-center text-slate-500 py-10">No cash collections found.</p>
             ) : (
               cashCollections.map(cash => (
-                <div key={cash.id} className="flex justify-between items-center p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors">
+                <div key={cash.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:p-4 border border-slate-100 dark:border-emerald-900/30 rounded-xl hover:bg-slate-50 dark:hover:bg-[#0d1a0e] transition-colors gap-2 sm:gap-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                      <HandCoins size={20} />
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <HandCoins className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800 dark:text-emerald-100">{cash.description || "Collection"}</p>
-                      <p className="text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(cash.created_at), 'MMM dd, yyyy hh:mm a')}</p>
+                      <p className="font-bold text-sm sm:text-base text-slate-800 dark:text-emerald-100">{cash.description || "Collection"}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-500 dark:text-emerald-500/70">{format(new Date(cash.created_at), 'MMM dd, yyyy hh:mm a')}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-emerald-600 dark:text-emerald-400">৳{cash.amount.toLocaleString('en-IN')}</p>
-                    <p className="text-[10px] text-slate-500 uppercase">Received</p>
+                  <div className="flex sm:flex-col justify-between items-center sm:items-end w-full sm:w-auto pt-2 border-t sm:border-t-0 sm:pt-0 pl-11 sm:pl-0">
+                    <p className="text-[10px] text-slate-500 uppercase sm:hidden">Received</p>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">৳{cash.amount.toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-slate-500 uppercase hidden sm:block">Received</p>
                   </div>
                 </div>
               ))

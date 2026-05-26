@@ -34,6 +34,11 @@
     "noOrders": "No orders found",
     "orderStatus": {
       "order_placed": "Order Placed",
+      "plate_done": "Plate Done",
+      "printing": "Printing",
+      "cutting": "Cutting",
+      "sewing": "Sewing",
+      "checking": "Checking",
       "ready_delivery": "Ready for Delivery",
       "delivered": "Delivered",
       "canceled": "Canceled",

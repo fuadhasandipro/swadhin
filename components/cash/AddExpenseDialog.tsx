@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { paySalary } from "@/lib/actions/salary";
 import { toast } from "react-hot-toast";
 
 
@@ -18,8 +18,10 @@ import { toast } from "react-hot-toast";
 const expenseSchema = z.object({
   amount: z.number().min(1, "Amount must be greater than 0"),
   category: z.string().min(1, "Category is required"),
-  description: z.string().min(1, "Description is required"),
-  date: z.string().optional()
+  description: z.string().optional(),
+  date: z.string().optional(),
+  employee_id: z.string().optional(),
+  salary_month: z.string().optional()
 });
 
 type FormValues = z.infer<typeof expenseSchema>;
@@ -29,39 +31,69 @@ export function AddExpenseDialog({
   onClose,
   cashInHand,
   expenseCategories,
+  employees,
   onSuccess
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   cashInHand: number;
   expenseCategories: { id: string, name: string }[];
+  employees: any[];
   onSuccess?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: { amount: undefined, category: "", description: "", date: new Date().toISOString().split('T')[0] }
+    defaultValues: { 
+      amount: undefined, 
+      category: "", 
+      description: "", 
+      date: new Date().toISOString().split('T')[0],
+      employee_id: "",
+      salary_month: new Date().toISOString().slice(0, 7) // YYYY-MM
+    }
   });
 
   const category = watch("category");
   const amount = watch("amount") || 0;
+  const employee_id = watch("employee_id");
+
+  useEffect(() => {
+    if (category === 'salary' && employee_id) {
+      const selectedEmployee = employees?.find(e => e.id === employee_id);
+      if (selectedEmployee && selectedEmployee.salary_amount) {
+        setValue("amount", selectedEmployee.salary_amount, { shouldValidate: true });
+      } else {
+        setValue("amount", undefined as any);
+      }
+    }
+  }, [employee_id, category, employees, setValue]);
 
   const showWarning = amount > cashInHand;
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      await addCashTransaction({
-        type: 'out',
-        category: data.category === 'salary' ? 'salary' : 'expense', // Map specific types if needed, but DB allows 'expense' for most
-        amount: data.amount,
-        description: data.category !== 'expense' && data.category !== 'other' && data.category !== 'salary' 
-          ? `[${data.category}] ${data.description}` // Embed sub-category in description since DB category is just 'expense'
-          : data.description,
-        date: data.date
-      });
-      toast.success("Expense recorded successfully");
+      if (data.category === 'salary') {
+        if (!data.employee_id) throw new Error("Employee is required for salary payment.");
+        if (!data.salary_month) throw new Error("Salary month is required.");
+        
+        await paySalary(data.employee_id, data.salary_month, data.amount, data.description || "");
+      } else {
+        if (!data.description) throw new Error("Description is required.");
+        await addCashTransaction({
+          type: 'out',
+          category: 'expense',
+          amount: data.amount,
+          description: data.category !== 'expense' && data.category !== 'other'
+            ? `[${data.category}] ${data.description}`
+            : data.description,
+          date: data.date
+        });
+      }
+      
+      toast.success(data.category === 'salary' ? "Salary paid successfully" : "Expense recorded successfully");
       reset();
       if (onSuccess) onSuccess();
       onClose();
@@ -113,28 +145,51 @@ export function AddExpenseDialog({
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select 
-              value={category} 
-              onValueChange={(v: any) => setValue("category", v, { shouldValidate: true })}
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              {...register("category")}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {expenseCategories.map(c => (
-                  <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">Select Category</option>
+              <option value="salary">Salary</option>
+              {expenseCategories.filter(c => c.name.toLowerCase() !== 'salary').map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
             {errors.category && <p className="text-red-500 text-xs">{errors.category.message}</p>}
           </div>
 
+          {category === 'salary' && (
+            <div className="flex gap-4">
+              <div className="space-y-2 flex-1">
+                <Label>Employee</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  {...register("employee_id")}
+                >
+                  <option value="">Select Employee</option>
+                  {employees?.map(emp => (
+                    <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+                  ))}
+                </select>
+                {errors.employee_id && <p className="text-red-500 text-xs">{errors.employee_id.message}</p>}
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label>Month</Label>
+                <Input
+                  type="month"
+                  {...register("salary_month")}
+                />
+                {errors.salary_month && <p className="text-red-500 text-xs">{errors.salary_month.message}</p>}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>Description / Notes</Label>
             <Input
               type="text"
               {...register("description")}
-              placeholder="e.g. Paid for XYZ"
+              placeholder={category === 'salary' ? "e.g. Bkash / Bonus" : "e.g. Paid for XYZ"}
             />
             {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
           </div>

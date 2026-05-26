@@ -34,6 +34,11 @@
     "noOrders": "কোনো অর্ডার পাওয়া যায়নি",
     "orderStatus": {
       "order_placed": "অর্ডার প্লেসড",
+      "plate_done": "প্লেট সম্পন্ন",
+      "printing": "প্রিন্টিং",
+      "cutting": "কাটিং",
+      "sewing": "সেলাই",
+      "checking": "চেকিং",
       "ready_delivery": "ডেলিভারির জন্য প্রস্তুত",
       "delivered": "ডেলিভারড",
       "canceled": "বাতিল",
