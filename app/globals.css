@@ -133,27 +133,27 @@
 
 /* React Select Dark Mode Overrides */
 .react-select__control {
-  @apply bg-background border-input !important;
+  @apply !bg-background !border-input;
 }
 .react-select__control--is-focused {
-  @apply border-ring ring-1 ring-ring !important;
+  @apply !border-ring !ring-1 !ring-ring;
   box-shadow: none !important;
 }
 .react-select__menu {
-  @apply bg-background border border-border shadow-md z-50 !important;
+  @apply !bg-background !border !border-border !shadow-md !z-50;
 }
 .react-select__option {
-  @apply text-foreground bg-background !important;
+  @apply !text-foreground !bg-background;
 }
 .react-select__option--is-focused {
-  @apply bg-muted !important;
+  @apply !bg-muted;
 }
 .react-select__option--is-selected {
-  @apply bg-primary text-primary-foreground !important;
+  @apply !bg-primary !text-primary-foreground;
 }
 .react-select__single-value {
-  @apply text-foreground !important;
+  @apply !text-foreground;
 }
 .react-select__input-container {
-  @apply text-foreground !important;
+  @apply !text-foreground;
 }
