@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "./auth";
+import { logActivity } from "@/lib/utils/activityLogger";
 import { revalidatePath } from "next/cache";
 
 export async function getCustomers(searchQuery?: string) {
@@ -40,6 +41,10 @@ export async function createCustomer(data: { name: string; phone: string; addres
   if (!profile) throw new Error("Unauthorized");
   
   const supabase = await createClient();
+
+  if (!/^01[3-9]\d{8}$/.test(data.phone)) {
+    throw new Error("Invalid phone number format. Must be a valid BD number.");
+  }
   
   // Check phone uniqueness
   const { count } = await supabase.from('customers').select('*', { count: 'exact', head: true }).eq('phone', data.phone);
@@ -58,13 +63,13 @@ export async function createCustomer(data: { name: string; phone: string; addres
     
   if (error) throw new Error("Failed to create customer: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'create_customer',
-    entity_type: 'customer',
-    entity_id: newCustomer.id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'CREATE_CUSTOMER',
+    entityType: 'customers',
+    entityId: newCustomer.id,
     details: { name: data.name, phone: data.phone, balance: data.balance || 0 }
-  }]);
+  });
 
   revalidatePath('/customers');
   return newCustomer;
@@ -90,13 +95,13 @@ export async function updateCustomer(id: string, data: { name?: string; phone?: 
     
   if (error) throw new Error("Failed to update customer: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'update_customer',
-    entity_type: 'customer',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'UPDATE_CUSTOMER',
+    entityType: 'customers',
+    entityId: id,
     details: data
-  }]);
+  });
 
   revalidatePath('/customers');
   revalidatePath(`/customers/${id}`);
@@ -123,13 +128,13 @@ export async function deleteCustomer(id: string) {
   const { error } = await supabase.from('customers').delete().eq('id', id);
   if (error) throw new Error("Failed to delete customer: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'delete_customer',
-    entity_type: 'customer',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'DELETE_CUSTOMER',
+    entityType: 'customers',
+    entityId: id,
     details: { deleted_customer_id: id }
-  }]);
+  });
 
   revalidatePath('/customers');
 }
@@ -165,13 +170,13 @@ export async function adjustBalance(id: string, type: 'debit' | 'credit', amount
 
   if (updateError) throw new Error("Failed to update balance: " + updateError.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'adjust_balance',
-    entity_type: 'customer',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'ADJUST_BALANCE',
+    entityType: 'customers',
+    entityId: id,
     details: { type, amount, description, old_balance: customer.balance, new_balance: newBalance }
-  }]);
+  });
 
   revalidatePath('/customers');
   revalidatePath(`/customers/${id}`);
@@ -222,13 +227,13 @@ export async function recordCashCollection(id: string, amount: number, descripti
 
   if (updateError) throw new Error("Failed to update customer balance: " + updateError.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'cash_collection',
-    entity_type: 'customer',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'CASH_COLLECTION',
+    entityType: 'customers',
+    entityId: id,
     details: { amount, description, old_balance: customer.balance, new_balance: newBalance }
-  }]);
+  });
 
   revalidatePath('/customers');
   revalidatePath(`/customers/${id}`);

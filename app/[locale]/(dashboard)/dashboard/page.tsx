@@ -8,6 +8,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Wallet, Users, AlertCircle, Building2
 import { getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const t = await getTranslations('dashboard');
@@ -29,18 +30,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Header & Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-slate-800 dark:text-emerald-100">{t('overview')}</h2>
-          <p className="text-sm text-slate-500 dark:text-emerald-500/70">{t('overviewDesc')}</p>
+          <h2 className="text-2xl font-heading font-bold text-foreground">{t('overview')}</h2>
+          <p className="text-sm text-muted-foreground">{t('overviewDesc')}</p>
         </div>
 
-        <div className="flex items-center bg-slate-100 dark:bg-[#0d1a0e] p-1 rounded-xl border border-slate-200 dark:border-emerald-900/50 w-fit shadow-sm">
+        <div className="flex items-center bg-muted p-1 rounded-xl w-fit">
           <Link
             href="?period=today"
             className={cn(
               "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
               period === 'today'
-                ? "bg-white dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 shadow-sm"
-                : "text-slate-500 dark:text-emerald-600 hover:text-slate-700 dark:hover:text-emerald-400"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {t('today')}
@@ -50,8 +51,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             className={cn(
               "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
               period === 'month'
-                ? "bg-white dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 shadow-sm"
-                : "text-slate-500 dark:text-emerald-600 hover:text-slate-700 dark:hover:text-emerald-400"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {t('thisMonth')}
@@ -102,13 +103,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart Section */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#0a0f0a] border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-6 shadow-sm dark:shadow-[0_0_20px_rgba(16,185,129,0.05)]">
-          <div className="mb-4">
-            <h2 className="text-lg font-heading font-bold text-slate-800 dark:text-emerald-100">{t('monthlyCashFlow')}</h2>
-            <p className="text-sm text-slate-500 dark:text-emerald-500/70">{t('monthlyCashFlowDesc')}</p>
-          </div>
-          <MonthlyCashChart data={chartData} />
-        </div>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">{t('monthlyCashFlow')}</CardTitle>
+            <CardDescription>{t('monthlyCashFlowDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MonthlyCashChart data={chartData} />
+          </CardContent>
+        </Card>
 
         {/* Stock Summary */}
         <div className="lg:col-span-1">

@@ -40,9 +40,17 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, full_name, phone, role, privileges, salary_amount')
     .eq('user_id', user.id)
     .single();
+
+  if (profile && typeof profile.privileges === 'string') {
+    try {
+      profile.privileges = JSON.parse(profile.privileges);
+    } catch (e) {
+      profile.privileges = {};
+    }
+  }
 
   return profile as Profile | null;
 }

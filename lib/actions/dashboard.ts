@@ -1,13 +1,20 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { startOfDay, startOfMonth, format, subMonths } from "date-fns";
+import { unstable_cache } from "next/cache";
 
-export async function getDashboardStats(period: 'today' | 'month' = 'today') {
-  const supabase = await createClient();
-  
-  const startDate = period === 'today' ? startOfDay(new Date()) : startOfMonth(new Date());
-  const startDateStr = startDate.toISOString();
+const getCachedStats = unstable_cache(
+  async (period: 'today' | 'month') => {
+    // Use admin client because unstable_cache cannot access cookies()
+    const supabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    const startDate = period === 'today' ? startOfDay(new Date()) : startOfMonth(new Date());
+    const startDateStr = startDate.toISOString();
 
   // 1 & 2. Cash In & Cash Out (based on period)
   const { data: periodCash } = await supabase
@@ -80,6 +87,10 @@ export async function getDashboardStats(period: 'today' | 'month' = 'today') {
     weOweCustomers,
     totalBusinessValue
   };
+});
+
+export async function getDashboardStats(period: 'today' | 'month' = 'today') {
+  return getCachedStats(period);
 }
 
 export async function getMonthlyChartData() {

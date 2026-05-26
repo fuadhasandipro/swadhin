@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { useRouter } from "@/routing";
+import { Loader2 } from "lucide-react";
 
 const ORDER_STATUS_FLOW: OrderStatus[] = [
   'order_placed', 'designing', 'design_waiting_confirmation', 'design_confirmed', 
@@ -49,11 +50,11 @@ export function OrderStatusUpdate({
 
   return (
     <div className="flex items-center gap-3">
-      <Select value={status} onValueChange={(v: OrderStatus) => setStatus(v)} disabled={loading}>
-        <SelectTrigger className="w-[220px] bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
+      <Select value={status} onValueChange={(v: any) => setStatus(v)} disabled={loading}>
+        <SelectTrigger className="w-[220px]">
           <SelectValue placeholder="Select Status" />
         </SelectTrigger>
-        <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
+        <SelectContent>
           {ORDER_STATUS_FLOW.map((s, idx) => {
             // Can only move forward or cancel
             const isDisabled = s !== 'canceled' && idx < currentIndex;
@@ -71,9 +72,9 @@ export function OrderStatusUpdate({
           onClick={handleUpdate} 
           disabled={loading}
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-500 text-white"
         >
-          {loading ? "..." : t("detail.changeStatus")}
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {loading ? "Updating..." : t("detail.changeStatus")}
         </Button>
       )}
     </div>

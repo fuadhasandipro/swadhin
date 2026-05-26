@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Swadhin Enterprise ERP System
 
-## Getting Started
+A modern, Bangla-first Enterprise Resource Planning (ERP) web application built for Swadhin Enterprise. This system manages orders, inventory (stock), customers, cash flow, and employee salaries.
 
-First, run the development server:
+Built with **Next.js 14 (App Router)**, **Supabase**, **Tailwind CSS**, and **Shadcn UI**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- **PWA Ready**: Installable on mobile and desktop via Chrome/Safari.
+- **Order Management**: Track orders through a Kanban board (Designing -> Printing -> Delivery).
+- **Stock Management**: Track raw materials and finished goods with real-time value calculation.
+- **Cash Flow**: Track daily income and expenses.
+- **Role-Based Access**: Granular permissions (Admin, Manager, Staff).
+- **Activity Log**: Full audit trail of every database mutation.
+- **SMS Integration**: Automated SMS via GreenWeb API on order placement and delivery.
+
+---
+
+## 🛠️ Setup Instructions
+
+### 1. Prerequisites
+- Node.js (v18 or newer)
+- npm or yarn
+- A [Supabase](https://supabase.com/) account and project.
+- A [GreenWeb BD](https://greenweb.com.bd/) API account (for SMS).
+
+### 2. Environment Variables
+Create a `.env.local` file in the root of the project:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# SMS API (GreenWeb BD)
+GREENWEB_API_TOKEN=your_greenweb_token
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Database Setup (Supabase)
+Navigate to your Supabase project's SQL Editor. You need to run the initial migration file to set up the tables, triggers, and RPC functions.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Open `supabase/migrations/001_initial_schema.sql` from this codebase.
+2. Copy the entire contents and run it in the Supabase SQL Editor.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. First Run: Seed Admin User
+To log in for the first time, you need an Administrator account. Since Supabase handles authentication, it is easiest to create the user via the Supabase Auth Dashboard, but you can also run this SQL snippet:
 
-## Learn More
+```sql
+-- Run this after migrations to create the first admin profile manually.
+-- IMPORTANT: First, create a user in the Supabase Auth Dashboard (with Phone Number + Password).
+-- Copy that newly created user's UUID and replace `YOUR_AUTH_USER_ID` below.
 
-To learn more about Next.js, take a look at the following resources:
+INSERT INTO public.profiles (id, user_id, full_name, phone, role, active) 
+VALUES (
+  gen_random_uuid(), 
+  'YOUR_AUTH_USER_ID', -- The UUID from auth.users
+  'Super Admin', 
+  '01700000000', 
+  'admin', 
+  true
+);
+```
+*(Alternatively, you can just sign up via the app and manually change the `role` to `admin` in the `profiles` table).*
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Install Dependencies & Run
+```bash
+npm install
+npm run dev
+```
+The app will be available at `http://localhost:3000`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📱 SMS API Setup
+The system uses GreenWeb BD for sending SMS to customers.
+1. Sign up at [GreenWeb BD](https://greenweb.com.bd/).
+2. Get your API Token from the dashboard.
+3. Add it to `GREENWEB_API_TOKEN` in your `.env.local`.
+4. The system automatically triggers SMS on:
+   - Order Creation
+   - Order Delivery
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+*Note: SMS sending has a built-in rate limit of 10 messages per minute per to prevent accidental spam or abuse.*
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🚀 Deployment to Vercel
+
+1. Push your code to a GitHub repository.
+2. Log into [Vercel](https://vercel.com/) and click **Add New... > Project**.
+3. Import your GitHub repository.
+4. Add the following Environment Variables in the Vercel dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `GREENWEB_API_TOKEN`
+5. Click **Deploy**.
+
+Because this app utilizes Next.js 14 Server Actions and React Server Components, Vercel will automatically optimize everything for edge and serverless execution.

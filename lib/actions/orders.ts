@@ -3,6 +3,7 @@
 import { createClient } from "../supabase/server";
 import { Order, OrderStatus } from "@/types";
 import { sendOrderPlacedSMS, sendDeliveredSMS } from "./sms";
+import { logActivity } from "@/lib/utils/activityLogger";
 import { revalidatePath } from "next/cache";
 
 const ORDER_STATUS_FLOW: OrderStatus[] = [
@@ -22,8 +23,14 @@ export async function createOrder(data: any) {
 
   let customerId = data.customer_id;
 
+  if (data.qty <= 0 || !Number.isInteger(data.qty)) throw new Error("Quantity must be a positive integer.");
+  if (data.rate_per_piece < 0) throw new Error("Rate cannot be negative.");
+
   // Create new customer if needed
   if (!customerId && data.new_customer) {
+    if (!/^01[3-9]\d{8}$/.test(data.new_customer.phone)) {
+      throw new Error("Invalid phone number format. Must be a valid BD number (e.g., 017...).");
+    }
     const { data: newCustomer, error: customerError } = await supabase
       .from('customers')
       .insert({
@@ -65,14 +72,41 @@ export async function createOrder(data: any) {
 
   if (orderError) throw new Error(orderError.message);
 
+  // --- IMMEDIATE DEDUCTIONS (Stock & Balance) ---
+  
+  // 1. Customer Balance Debit
+  // If order is placed, customer owes us, so balance decreases (gets more negative).
+  const { data: customerData } = await supabase.from('customers').select('balance').eq('id', customerId).single();
+  if (customerData) {
+    const newBalance = customerData.balance - order.total_amount;
+    await supabase.from('customers').update({ balance: newBalance }).eq('id', customerId);
+    
+    // Add transaction ledger entry
+    await supabase.from('customer_transactions').insert({
+      customer_id: customerId,
+      type: 'debit',
+      amount: order.total_amount,
+      description: `Order Placed (#${order.id.slice(0, 8)})`,
+      order_id: order.id
+    });
+  }
+
+  // 2. Stock Reduction
+  if (order.product_id) {
+    const { data: productData } = await supabase.from('products').select('qty').eq('id', order.product_id).single();
+    if (productData) {
+      await supabase.from('products').update({ qty: productData.qty - order.qty }).eq('id', order.product_id);
+    }
+  }
+
   // Log activity
   if (profile) {
-    await supabase.rpc('log_activity', {
-      p_user_id: profile.id,
-      p_action: 'created_order',
-      p_entity_type: 'orders',
-      p_entity_id: order.id,
-      p_details: { status: 'order_placed', total: order.total_amount }
+    await logActivity(supabase, {
+      userId: profile.id,
+      action: 'CREATE_ORDER',
+      entityType: 'orders',
+      entityId: order.id,
+      details: { status: 'order_placed', total: order.total_amount }
     });
   }
 
@@ -119,10 +153,17 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     }
   }
 
-  const privileges = Array.isArray(profile.privileges) ? profile.privileges : [];
+  const role = profile.role;
+  let privileges: any = {};
+  if (typeof profile.privileges === 'string') {
+    try { privileges = JSON.parse(profile.privileges); } catch (e) {}
+  } else if (profile.privileges) {
+    privileges = profile.privileges;
+  }
+  const isOrderManager = (Array.isArray(privileges) ? privileges.includes('order_manager') : privileges?.order_manager === true) || role === 'manager';
+  const isDeliveryManager = Array.isArray(privileges) ? privileges.includes('delivery_manager') : privileges?.delivery_manager === true;
+
   const isAdmin = profile.role === 'admin';
-  const isOrderManager = privileges.includes('order_manager') || profile.role === 'manager';
-  const isDeliveryManager = privileges.includes('delivery_manager');
 
   if (!isAdmin && !isOrderManager) {
     // Delivery manager restriction
@@ -135,12 +176,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     }
   }
 
-  // Stock check if delivering
-  if (newStatus === 'delivered' && order.product_id) {
-    if ((order.product?.qty || 0) < order.qty) {
-      throw new Error("অপর্যাপ্ত স্টক (Insufficient Stock)");
-    }
-  }
+  // The old stock check during delivery has been removed because stock is now deducted immediately at order creation.
 
   const { data: updatedOrder, error: updateError } = await supabase
     .from('orders')
@@ -152,15 +188,42 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
   if (updateError) throw new Error(updateError.message);
 
   // Log activity
-  await supabase.rpc('log_activity', {
-    p_user_id: profile.id,
-    p_action: 'updated_order_status',
-    p_entity_type: 'orders',
-    p_entity_id: order.id,
-    p_details: { from: oldStatus, to: newStatus }
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'UPDATE_STATUS',
+    entityType: 'orders',
+    entityId: order.id,
+    details: { from: oldStatus, to: newStatus }
   });
 
-  // Triggers handle stock reduction if status is delivered
+  // --- REVERT DEDUCTIONS IF CANCELED ---
+  if (newStatus === 'canceled' && oldStatus !== 'canceled') {
+    // 1. Revert Balance (Credit)
+    const { data: customerData } = await supabase.from('customers').select('balance').eq('id', order.customer_id).single();
+    if (customerData) {
+      const newBalance = customerData.balance + order.total_amount;
+      await supabase.from('customers').update({ balance: newBalance }).eq('id', order.customer_id);
+      
+      // Add transaction ledger entry
+      await supabase.from('customer_transactions').insert({
+        customer_id: order.customer_id,
+        type: 'credit',
+        amount: order.total_amount,
+        description: `Order Canceled (#${order.id.slice(0, 8)})`,
+        order_id: order.id
+      });
+    }
+
+    // 2. Revert Stock
+    if (order.product_id) {
+      const { data: productData } = await supabase.from('products').select('qty').eq('id', order.product_id).single();
+      if (productData) {
+        await supabase.from('products').update({ qty: productData.qty + order.qty }).eq('id', order.product_id);
+      }
+    }
+  }
+
+  // Triggers handle stock reduction if status is delivered -> REMOVED IN DB (now handled on create)
   // Send delivered SMS
   if (newStatus === 'delivered' && order.customer?.phone) {
     await sendDeliveredSMS(order.id, order.customer.phone, order.total_amount);
@@ -220,7 +283,7 @@ export async function deleteOrder(id: string) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('id, role')
     .eq('user_id', userData.user.id)
     .single();
 
@@ -236,6 +299,14 @@ export async function deleteOrder(id: string) {
   const { error } = await supabase.from('orders').delete().eq('id', id);
   if (error) throw new Error(error.message);
   
+  await logActivity(supabase, {
+    userId: profile!.id,
+    action: 'DELETE_ORDER',
+    entityType: 'orders',
+    entityId: id,
+    details: { order_id: id }
+  });
+
   revalidatePath('/orders');
   return true;
 }

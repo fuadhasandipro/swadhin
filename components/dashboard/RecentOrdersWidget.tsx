@@ -5,6 +5,7 @@ import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from '@/routing';
 import { useTranslations } from 'next-intl';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 // Helper to get status color and label
 const getStatusConfig = (status: OrderStatus) => {
@@ -27,18 +28,18 @@ export function RecentOrdersWidget({ orders }: { orders: OrderWithCustomer[] }) 
   };
 
   return (
-    <div className="bg-white dark:bg-[#0a0f0a] border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-6 shadow-sm dark:shadow-[0_0_20px_rgba(16,185,129,0.05)] h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-lg font-heading font-bold text-slate-800 dark:text-emerald-100">{t('recentOrders')}</h2>
-          <p className="text-sm text-slate-500 dark:text-emerald-500/70">{t('recentOrdersDesc')}</p>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="space-y-1">
+          <CardTitle className="text-lg">{t('recentOrders')}</CardTitle>
+          <CardDescription>{t('recentOrdersDesc')}</CardDescription>
         </div>
         <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl">
           <ShoppingBag size={20} />
         </div>
-      </div>
+      </CardHeader>
 
-      <div className="flex-1 space-y-3">
+      <CardContent className="flex-1 space-y-3">
         {orders.map(order => {
           const statusConfig = getStatusConfig(order.status);
           
@@ -46,10 +47,10 @@ export function RecentOrdersWidget({ orders }: { orders: OrderWithCustomer[] }) 
             <Link 
               key={order.id} 
               href={`/orders/${order.id}`}
-              className="flex items-center justify-between p-3 rounded-xl border bg-slate-50 dark:bg-[#0d1a0e] border-slate-200 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-500 hover:shadow-md transition-all group"
+              className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-muted/50 hover:shadow-sm transition-all group"
             >
               <div>
-                <h4 className="font-medium text-slate-800 dark:text-emerald-100 font-sans text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <h4 className="font-medium text-foreground text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                   {order.customers?.name || t('unknownCustomer')}
                 </h4>
                 <div className={cn("text-[10px] font-sans mt-1.5 px-2 py-0.5 rounded-full inline-block border", statusConfig.color)}>
@@ -58,8 +59,8 @@ export function RecentOrdersWidget({ orders }: { orders: OrderWithCustomer[] }) 
               </div>
               
               <div className="text-right flex flex-col items-end">
-                <p className="font-bold font-sans text-slate-800 dark:text-emerald-300 text-sm">৳{order.total_amount.toLocaleString('en-IN')}</p>
-                <div className="flex items-center text-[10px] text-slate-500 dark:text-emerald-500/70 mt-1 font-medium group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <p className="font-bold text-foreground text-sm">৳{order.total_amount.toLocaleString('en-IN')}</p>
+                <div className="flex items-center text-[10px] text-muted-foreground mt-1 font-medium group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                   {t('details')} <ArrowRight size={12} className="ml-1" />
                 </div>
               </div>
@@ -68,15 +69,15 @@ export function RecentOrdersWidget({ orders }: { orders: OrderWithCustomer[] }) 
         })}
         
         {orders.length === 0 && (
-          <div className="text-center text-slate-500 dark:text-emerald-600 font-sans py-8">
+          <div className="text-center text-muted-foreground font-sans py-8">
             {t('noOrders')}
           </div>
         )}
-      </div>
-      
-      <Link href="/orders" className="mt-4 block text-center text-sm text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors font-medium">
-        {t('viewAllOrders')} &rarr;
-      </Link>
-    </div>
+        
+        <Link href="/orders" className="mt-4 block text-center text-sm text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors font-medium">
+          {t('viewAllOrders')} &rarr;
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

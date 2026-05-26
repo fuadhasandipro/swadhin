@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "react-hot-toast";
+import { Loader2 } from "lucide-react";
 
 export function CreateOrderForm({ 
   preselectedCustomerId 
@@ -27,7 +28,9 @@ export function CreateOrderForm({
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [printConfigs, setPrintConfigs] = useState<PrintColorConfig[]>([]);
+
+  const SINGLE_COLORS = ["লাল", "সবুজ", "নীল", "সাদা", "হলুদ", "কালো", "কমলা", "খয়েরি", "গোলাপি", "ছাই", "বেগুনী"];
+  const MULTI_COLORS = ["লাল-নীল", "লাল-সবুজ", "নীল-সাদা", "কালো-লাল", "সবুজ-হলুদ"];
 
   const [isNewCustomer, setIsNewCustomer] = useState(!preselectedCustomerId);
   
@@ -54,14 +57,12 @@ export function CreateOrderForm({
 
   useEffect(() => {
     async function fetchData() {
-      const [custRes, prodRes, printRes] = await Promise.all([
+      const [custRes, prodRes] = await Promise.all([
         supabase.from("customers").select("*").order("name"),
-        supabase.from("products").select("*").gt("qty", 0).order("bag_size"),
-        supabase.from("print_color_configs").select("*").eq("is_active", true)
+        supabase.from("products").select("*").gt("qty", 0).order("bag_size")
       ]);
       if (custRes.data) setCustomers(custRes.data);
       if (prodRes.data) setProducts(prodRes.data);
-      if (printRes.data) setPrintConfigs(printRes.data);
     }
     fetchData();
   }, [supabase]);
@@ -110,9 +111,9 @@ export function CreateOrderForm({
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto pb-20">
       
       {/* Customer Section */}
-      <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/30 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-emerald-400 font-bold">{t("form.customerSection")}</CardTitle>
+          <CardTitle>{t("form.customerSection")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!preselectedCustomerId && (
@@ -127,17 +128,24 @@ export function CreateOrderForm({
           )}
 
           {!isNewCustomer ? (
-            <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.selectCustomer")}</Label>
+            <div className="space-y-3">
+              <Label>{t("form.selectCustomer")}</Label>
               <Select 
                 value={formData.customer_id} 
-                onValueChange={(v: string) => setFormData({ ...formData, customer_id: v })}
+                onValueChange={(v: any) => {
+                  const cust = customers.find(c => c.id === v);
+                  setFormData({ ...formData, customer_id: v, location: cust?.address || formData.location });
+                }}
                 required={!isNewCustomer}
               >
-                <SelectTrigger className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                  <SelectValue placeholder={t("form.selectCustomer")} />
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder={t("form.selectCustomer")}>
+                    {formData.customer_id && customers.find(c => c.id === formData.customer_id) 
+                      ? `${customers.find(c => c.id === formData.customer_id)?.name} (${customers.find(c => c.id === formData.customer_id)?.phone})` 
+                      : null}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
+                <SelectContent>
                   {customers.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name} ({c.phone})</SelectItem>
                   ))}
@@ -146,29 +154,29 @@ export function CreateOrderForm({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-emerald-300 font-medium">Name</Label>
+              <div className="space-y-3">
+                <Label>Name</Label>
                 <Input 
                   required={isNewCustomer}
-                  className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
                   value={formData.new_customer.name}
                   onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, name: e.target.value }})}
+                  className="h-11"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-emerald-300 font-medium">Phone</Label>
+              <div className="space-y-3">
+                <Label>Phone</Label>
                 <Input 
                   required={isNewCustomer}
-                  className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
                   value={formData.new_customer.phone}
                   onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, phone: e.target.value }})}
+                  className="h-11"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-slate-700 dark:text-emerald-300 font-medium">Address</Label>
+              <div className="space-y-3 md:col-span-2">
+                <Label>Address</Label>
                 <Input 
-                  className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
                   value={formData.new_customer.address}
+                  className="h-11"
                   onChange={(e: any) => {
                     setFormData({ 
                       ...formData, 
@@ -184,168 +192,91 @@ export function CreateOrderForm({
       </Card>
 
       {/* Order Details Section */}
-      <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/30 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-emerald-400 font-bold">{t("form.orderDetails")}</CardTitle>
+          <CardTitle>{t("form.orderDetails")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.orderDate")}</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-3">
+            <Label>{t("form.orderDate")}</Label>
             <Input 
               type="date"
               required
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
               value={formData.order_date}
               onChange={(e: any) => setFormData({ ...formData, order_date: e.target.value })}
+              className="h-11"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.deliveryDate")}</Label>
+          <div className="space-y-3">
+            <Label>{t("form.deliveryDate")}</Label>
             <Input 
               type="date"
               required
               min={formData.order_date}
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
               value={formData.delivery_date}
               onChange={(e: any) => setFormData({ ...formData, delivery_date: e.target.value })}
+              className="h-11"
             />
           </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.location")}</Label>
+          <div className="space-y-3 md:col-span-2">
+            <Label>{t("form.location")}</Label>
             <Input 
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
               value={formData.location}
               onChange={(e: any) => setFormData({ ...formData, location: e.target.value })}
+              className="h-11"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Bag Specification Section */}
-      <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/30 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-emerald-400 font-bold">{t("form.bagSpec")}</CardTitle>
+          <CardTitle>{t("form.bagSpec")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.cuttingType")}</Label>
-            <Select 
-              value={formData.cutting_type} 
-              onValueChange={(v: "handle" | "d-cut") => setFormData({ ...formData, cutting_type: v })}
-            >
-              <SelectTrigger className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                <SelectItem value="handle">Handle Cut</SelectItem>
-                <SelectItem value="d-cut">D-Cut</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.gsm")}</Label>
-            <Input 
-              type="number"
-              required
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
-              value={formData.gsm || ''}
-              onChange={(e: any) => setFormData({ ...formData, gsm: Number(e.target.value) })}
-            />
-            <div className="flex gap-2 mt-1">
-              {[70, 80, 90, 100].map(val => (
-                <button 
-                  type="button" 
-                  key={val}
-                  onClick={() => setFormData({ ...formData, gsm: val })}
-                  className={`text-xs px-2 py-1 rounded border ${formData.gsm === val ? 'bg-emerald-600 border-emerald-500 text-white' : 'border-emerald-800 text-slate-700 dark:text-emerald-300 font-medium hover:bg-emerald-900/50'}`}
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.bodyColor")}</Label>
-            <Input 
-              required
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
-              value={formData.body_color}
-              onChange={(e: any) => setFormData({ ...formData, body_color: e.target.value })}
-            />
-          </div>
-
-          {formData.cutting_type === 'handle' && (
-            <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.handleColor")}</Label>
-              <Input 
-                required
-                className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
-                value={formData.handle_color}
-                onChange={(e: any) => setFormData({ ...formData, handle_color: e.target.value })}
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.printColorType")}</Label>
-            <Select 
-              value={formData.print_color_type} 
-              onValueChange={(v: "single" | "double") => setFormData({ ...formData, print_color_type: v })}
-            >
-              <SelectTrigger className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                <SelectItem value="single">{t("form.singleColor")}</SelectItem>
-                <SelectItem value="double">{t("form.doubleColor")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formData.print_color_type === 'double' && (
-            <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.printColorConfig")}</Label>
-              <Select 
-                value={formData.print_color_config?.id || ""} 
-                onValueChange={(v: string) => {
-                  const config = printConfigs.find(c => c.id === v);
-                  setFormData({ ...formData, print_color_config: config || null })
-                }}
-              >
-                <SelectTrigger className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                  <SelectValue placeholder="Select Config" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                  {printConfigs.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name} ({c.colors.join(' & ')})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2 md:col-span-2 pt-4 border-t border-emerald-900/30">
-            <div className="flex items-center space-x-2 mb-2">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-3 md:col-span-2 pb-4 border-b">
+            <div className="flex items-center space-x-2 mb-3">
               <Checkbox 
                 id="from_stock" 
                 checked={formData.from_stock} 
                 onCheckedChange={(c: boolean) => setFormData({...formData, from_stock: !!c})} 
               />
-              <Label htmlFor="from_stock" className="text-emerald-100">{t("form.fromStock")}</Label>
+              <Label htmlFor="from_stock" className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {t("form.fromStock")}
+              </Label>
             </div>
 
             {formData.from_stock ? (
               <Select 
                 value={formData.product_id} 
-                onValueChange={(v: string) => setFormData({ ...formData, product_id: v })}
+                onValueChange={(v: any) => {
+                  const prod = products.find(p => p.id === v);
+                  if (prod) {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      product_id: v,
+                      manual_bag_size: prod.bag_size,
+                      body_color: prod.bag_color,
+                      gsm: prod.gsm
+                    }));
+                  } else {
+                    setFormData(prev => ({ ...prev, product_id: v }));
+                  }
+                }}
                 required={formData.from_stock}
               >
-                <SelectTrigger className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
-                  <SelectValue placeholder="Select Stock Product" />
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select Stock Product">
+                    {formData.product_id && products.find(p => p.id === formData.product_id)
+                      ? (() => {
+                          const p = products.find(prod => prod.id === formData.product_id);
+                          return `${p?.bag_size} - ${p?.bag_color} (${p?.gsm} GSM) - ${p?.qty} available`;
+                        })()
+                      : null}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-emerald-950 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100">
+                <SelectContent>
                   {products.map(p => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.bag_size} - {p.bag_color} ({p.gsm} GSM) - {p.qty} available
@@ -354,57 +285,159 @@ export function CreateOrderForm({
                 </SelectContent>
               </Select>
             ) : (
-              <Input 
-                placeholder="Manual Bag Size (e.g. 13x15)"
-                required={!formData.from_stock}
-                className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
-                value={formData.manual_bag_size}
-                onChange={(e: any) => setFormData({ ...formData, manual_bag_size: e.target.value })}
-              />
+              <div className="space-y-3">
+                <Label>Manual Bag Size (e.g. 13x15)</Label>
+                <Input 
+                  placeholder="e.g. 13x15"
+                  required={!formData.from_stock}
+                  value={formData.manual_bag_size}
+                  onChange={(e: any) => setFormData({ ...formData, manual_bag_size: e.target.value })}
+                  className="h-11"
+                />
+              </div>
             )}
+          </div>
+
+          <div className="space-y-3">
+            <Label>{t("form.cuttingType")}</Label>
+            <Select 
+              value={formData.cutting_type} 
+              onValueChange={(v: any) => setFormData({ ...formData, cutting_type: v })}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="handle">Handle Cut</SelectItem>
+                <SelectItem value="d-cut">D-Cut</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>{t("form.gsm")}</Label>
+            <Input 
+              type="number"
+              required
+              value={formData.gsm || ''}
+              onChange={(e: any) => setFormData({ ...formData, gsm: Number(e.target.value) })}
+              className="h-11"
+            />
+            <div className="flex gap-2 mt-1">
+              {[70, 80, 90, 100].map(val => (
+                <button 
+                  type="button" 
+                  key={val}
+                  onClick={() => setFormData({ ...formData, gsm: val })}
+                  className={`text-xs px-2 py-1 rounded border transition-colors ${formData.gsm === val ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
+                >
+                  {val}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label>{t("form.bodyColor")}</Label>
+            <Input 
+              required
+              list="body_colors"
+              value={formData.body_color}
+              onChange={(e: any) => setFormData({ ...formData, body_color: e.target.value })}
+              className="h-11"
+            />
+            <datalist id="body_colors">
+              {SINGLE_COLORS.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+
+          {formData.cutting_type === 'handle' && (
+            <div className="space-y-3">
+              <Label>{t("form.handleColor")}</Label>
+              <Input 
+                required
+                list="handle_colors"
+                value={formData.handle_color}
+                onChange={(e: any) => setFormData({ ...formData, handle_color: e.target.value })}
+                className="h-11"
+              />
+              <datalist id="handle_colors">
+                {SINGLE_COLORS.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <Label>{t("form.printColorType")}</Label>
+            <Select 
+              value={formData.print_color_type} 
+              onValueChange={(v: any) => setFormData({ ...formData, print_color_type: v, print_color_config: null })}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">এক কালার (Single Color)</SelectItem>
+                <SelectItem value="double">মাল্টি কালার (Multi Color)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Print Color (প্রিন্ট কালার)</Label>
+            <Input 
+              required
+              list="print_colors"
+              value={formData.print_color_config?.color || ""}
+              onChange={(e: any) => setFormData({ ...formData, print_color_config: { color: e.target.value } })}
+              className="h-11"
+              placeholder={formData.print_color_type === 'single' ? "e.g. লাল" : "e.g. লাল-নীল"}
+            />
+            <datalist id="print_colors">
+              {(formData.print_color_type === 'single' ? SINGLE_COLORS : MULTI_COLORS).map(c => <option key={c} value={c} />)}
+            </datalist>
           </div>
         </CardContent>
       </Card>
 
       {/* Pricing Section */}
-      <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/30 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-emerald-400 font-bold">{t("form.pricing")}</CardTitle>
+          <CardTitle>{t("form.pricing")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.qty")}</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="space-y-3">
+            <Label>{t("form.qty")}</Label>
             <Input 
               type="number"
               min="1"
               required
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100 text-lg font-bold"
+              className="h-12 text-lg font-bold"
               value={formData.qty || ''}
               onChange={(e: any) => setFormData({ ...formData, qty: Number(e.target.value) })}
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.ratePerPiece")}</Label>
+          <div className="space-y-3">
+            <Label>{t("form.ratePerPiece")}</Label>
             <Input 
               type="number"
               step="0.01"
               min="0"
               required
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100 text-lg font-bold"
+              className="h-12 text-lg font-bold"
               value={formData.rate_per_piece || ''}
               onChange={(e: any) => setFormData({ ...formData, rate_per_piece: Number(e.target.value) })}
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.total")}</Label>
-            <div className="h-10 flex items-center px-3 bg-emerald-900/20 border border-emerald-800 rounded-md text-emerald-100 text-xl font-bold font-mono">
+          <div className="space-y-3">
+            <Label>{t("form.total")}</Label>
+            <div className="h-12 flex items-center px-3 bg-muted border rounded-md text-foreground text-xl font-bold font-mono">
               ৳{totalAmount.toFixed(2)}
             </div>
           </div>
           <div className="space-y-2 md:col-span-3">
-            <Label className="text-slate-700 dark:text-emerald-300 font-medium">{t("form.notes")}</Label>
+            <Label>{t("form.notes")}</Label>
             <Textarea 
-              className="bg-slate-50 dark:bg-emerald-950/50 border-slate-200 dark:border-emerald-800 text-slate-800 dark:text-emerald-100"
               value={formData.notes}
               onChange={(e: any) => setFormData({ ...formData, notes: e.target.value })}
             />
@@ -415,8 +448,9 @@ export function CreateOrderForm({
       <Button 
         type="submit" 
         disabled={loading}
-        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6 text-lg shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+        className="w-full py-6 text-lg"
       >
+        {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
         {loading ? t("form.creating") : t("form.submit")}
       </Button>
 

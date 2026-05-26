@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "./auth";
+import { logActivity } from "@/lib/utils/activityLogger";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts(searchQuery?: string) {
@@ -32,13 +33,13 @@ export async function createProduct(data: { bag_size: string; bag_color: string;
     
   if (error) throw new Error("Failed to create product: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'create_product',
-    entity_type: 'product',
-    entity_id: newProduct.id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'ADD_STOCK',
+    entityType: 'products',
+    entityId: newProduct.id,
     details: { bag_size: data.bag_size, qty: data.qty }
-  }]);
+  });
 
   revalidatePath('/stock');
   return newProduct;
@@ -57,13 +58,13 @@ export async function updateProduct(id: string, data: { bag_size?: string; bag_c
     
   if (error) throw new Error("Failed to update product: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'update_product',
-    entity_type: 'product',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'UPDATE_PRODUCT',
+    entityType: 'products',
+    entityId: id,
     details: data
-  }]);
+  });
 
   revalidatePath('/stock');
 }
@@ -87,13 +88,13 @@ export async function restockProduct(id: string, addQty: number) {
 
   if (error) throw new Error("Failed to restock: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'restock_product',
-    entity_type: 'product',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'RESTOCK_PRODUCT',
+    entityType: 'products',
+    entityId: id,
     details: { previous_qty: product.qty, added_qty: addQty, new_qty: newQty }
-  }]);
+  });
 
   revalidatePath('/stock');
   revalidatePath('/dashboard');
@@ -120,13 +121,13 @@ export async function deleteProduct(id: string) {
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw new Error("Failed to delete product: " + error.message);
 
-  await supabase.from('activity_log').insert([{
-    user_id: profile.id,
-    action: 'delete_product',
-    entity_type: 'product',
-    entity_id: id,
+  await logActivity(supabase, {
+    userId: profile.id,
+    action: 'DELETE_PRODUCT',
+    entityType: 'products',
+    entityId: id,
     details: { deleted_product_id: id }
-  }]);
+  });
 
   revalidatePath('/stock');
   revalidatePath('/dashboard');

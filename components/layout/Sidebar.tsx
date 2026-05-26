@@ -38,17 +38,36 @@ export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <aside className="hidden md:flex flex-col w-[240px] h-screen bg-[#0f1a0f] border-r border-emerald-900/30 animate-pulse">
+        <div className="h-16 flex items-center gap-3 px-4 border-b border-emerald-900/30">
+          <div className="w-8 h-8 bg-emerald-900/50 rounded-lg"></div>
+          <div className="w-24 h-6 bg-emerald-900/50 rounded"></div>
+        </div>
+        <div className="flex-1 py-6 px-3 flex flex-col gap-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-12 bg-emerald-900/20 rounded-xl"></div>
+          ))}
+        </div>
+      </aside>
+    );
+  }
 
   const role = profile.role;
-  const privileges = profile.privileges || [];
+  let privileges: any = {};
+  if (typeof profile.privileges === 'string') {
+    try { privileges = JSON.parse(profile.privileges); } catch (e) {}
+  } else if (profile.privileges) {
+    privileges = profile.privileges;
+  }
 
   const isVisible = (id: string) => {
     if (role === 'admin') return true;
     
     if (role === 'manager') {
-      const isOrderManager = privileges.includes('order_manager');
-      const isDeliveryManager = privileges.includes('delivery_manager');
+      const isOrderManager = (Array.isArray(privileges) ? privileges.includes('order_manager') : privileges?.order_manager === true);
+      const isDeliveryManager = (Array.isArray(privileges) ? privileges.includes('delivery_manager') : privileges?.delivery_manager === true);
       
       switch (id) {
         case 'dashboard':
@@ -59,7 +78,11 @@ export function Sidebar() {
         case 'stock':
         case 'cash':
         case 'reports':
+        case 'activity':
           return isOrderManager;
+        case 'salary':
+        case 'settings':
+          return false;
         default:
           return false;
       }
@@ -106,7 +129,7 @@ export function Sidebar() {
       {/* Nav Links */}
       <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-2 no-scrollbar">
         {visibleItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname?.startsWith(item.href) || false;
           const Icon = item.icon;
 
           return (

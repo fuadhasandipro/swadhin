@@ -9,10 +9,11 @@ import { Printer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function OrderDetailPage({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string; locale: string }>;
 }) {
+  const { id } = await params;
   const t = await getTranslations("orders");
   const order = await getOrderById(id);
   const supabase = await createClient();
@@ -149,10 +150,14 @@ export default async function OrderDetailPage({
               <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.print_color_type === 'single' ? t("form.singleColor") : t("form.doubleColor")}</div>
             </div>
 
-            {order.print_color_type === 'double' && order.print_color_config && (
+            {order.print_color_config && (
                <div className="space-y-1 md:col-span-2">
                  <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.printColorConfig")}</div>
-                 <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.print_color_config.name} ({order.print_color_config.colors.join(' & ')})</div>
+                 <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">
+                    {order.print_color_config.color || 
+                     (order.print_color_config.colors ? `${order.print_color_config.name} (${order.print_color_config.colors.join(' & ')})` : 
+                      (typeof order.print_color_config === 'string' ? order.print_color_config : JSON.stringify(order.print_color_config)))}
+                 </div>
                </div>
             )}
 

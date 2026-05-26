@@ -15,6 +15,20 @@ export async function sendSMS(to: string, message: string) {
       return { success: false, error: "SMS configuration missing." };
     }
 
+    const supabase = await createClient();
+
+    // Rate Limiting: Max 10 SMS per minute globally to prevent abuse
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count } = await supabase
+      .from("sms_logs")
+      .select("*", { count: "exact", head: true })
+      .gte("sent_at", oneMinuteAgo);
+      
+    if (count !== null && count >= 10) {
+      console.warn("SMS rate limit exceeded.");
+      return { success: false, error: "Rate limit exceeded. Try again in a minute." };
+    }
+
     const response = await fetch(GREENWEB_API_URL, {
       method: "POST",
       headers: {
@@ -31,9 +45,6 @@ export async function sendSMS(to: string, message: string) {
     // Typical greenweb success response contains "Ok"
     const success = resultText.toLowerCase().includes("ok") || response.ok;
 
-    // Log the result
-    const supabase = await createClient();
-    
     // Attempt to find customer id based on phone
     const { data: customer } = await supabase
       .from("customers")

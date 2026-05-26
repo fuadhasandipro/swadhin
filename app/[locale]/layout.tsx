@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/routing';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import NextTopLoader from 'nextjs-toploader';
 import "../globals.css";
 
 const hindSiliguri = Hind_Siliguri({
@@ -51,6 +52,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <NextIntlClientProvider messages={messages}>
+            <NextTopLoader color="#10b981" showSpinner={false} height={3} />
             <QueryProvider>
               {children}
             </QueryProvider>

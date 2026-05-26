@@ -8,14 +8,14 @@
     "overviewDesc": "Current state of your business",
     "today": "Today",
     "thisMonth": "This Month",
-    "cashIn": "Cash In",
-    "cashOut": "Cash Out",
+    "cashIn": "Income",
+    "cashOut": "Expense",
     "cashInHand": "Cash in Hand",
-    "dueFromCustomers": "Total Due (Receivable)",
-    "oweToCustomers": "Our Due (Payable)",
+    "dueFromCustomers": "Total Receivable",
+    "oweToCustomers": "Total Payable",
     "totalBusinessValue": "Total Business Value",
     "monthlyCashFlow": "Monthly Cash Flow",
-    "monthlyCashFlowDesc": "Income vs Expense over the last 6 months",
+    "monthlyCashFlowDesc": "Income & Expense of last 6 months",
     "income": "Income",
     "expense": "Expense",
     "topStock": "Top Stock",
@@ -23,12 +23,12 @@
     "totalStockValue": "Total Stock Value",
     "qty": "Qty",
     "cost": "Cost",
-    "viewAllStock": "View all stock",
+    "viewAllStock": "View All Stock",
     "recentOrders": "Recent Orders",
     "recentOrdersDesc": "Last 5 orders",
-    "viewAllOrders": "View all orders",
+    "viewAllOrders": "View All Orders",
     "stockAlert": "Stock Alert",
-    "stockAlertDesc": "Low stock items detected.",
+    "stockAlertDesc": "products have low stock.",
     "check": "Check",
     "noStock": "No stock found",
     "noOrders": "No orders found",
@@ -44,7 +44,7 @@
   },
   "stock": {
     "title": "Stock Management",
-    "subtitle": "Raw Materials & Finished Goods",
+    "subtitle": "Raw materials and finished goods stock",
     "searchPlaceholder": "Search by size or color...",
     "newStock": "New Stock",
     "totalValue": "Total Stock Value",
@@ -60,21 +60,21 @@
     "noStock": "No stock found",
     "restock": "Restock",
     "addStockTitle": "Add New Stock",
-    "bagSize": "Bag Size (e.g. 13x15)",
+    "bagSize": "Bag Size (e.g., 13x15)",
     "color": "Color",
     "gsm": "GSM",
     "costPerPiece": "Cost/Piece (৳)",
     "initialQty": "Initial Qty",
     "submit": "Add Stock",
-    "product": "Product",
-    "currentStock": "Current Stock",
-    "newQty": "New Add Qty",
+    "product": "Product:",
+    "currentStock": "Current Stock:",
+    "newQty": "New Qty to Add",
     "updateStock": "Update Stock",
     "pcs": "pcs"
   },
   "customers": {
     "title": "Customers",
-    "subtitle": "Customer directory & ledgers",
+    "subtitle": "Customer list and ledger",
     "searchPlaceholder": "Search by name or phone...",
     "newCustomer": "New Customer",
     "columns": {
@@ -92,15 +92,15 @@
     "noCustomers": "No customers found",
     "viewProfile": "View Profile",
     "addCustomerTitle": "Add New Customer",
-    "editCustomerTitle": "Edit Customer",
+    "editCustomerTitle": "Edit Customer Info",
     "form": {
       "name": "Full Name",
       "phone": "Phone (01...)",
       "address": "Address",
       "openingBalance": "Opening Balance",
-      "openingBalanceDesc": "Negative means they owe you",
-      "submit": "Save Customer",
-      "update": "Update Customer"
+      "openingBalanceDesc": "Negative (-) means customer owes you",
+      "submit": "Save",
+      "update": "Update"
     },
     "profile": {
       "info": "Customer Info",
@@ -111,30 +111,30 @@
       "tabs": {
         "orders": "Orders",
         "transactions": "Transactions",
-        "cash": "Cash Collections"
+        "cash": "Cash Collection"
       }
     },
     "adjust": {
-      "title": "Adjust Balance",
+      "title": "Balance Adjustment",
       "type": "Adjustment Type",
       "debit": "Debit (They owe more)",
       "credit": "Credit (We owe more)",
       "amount": "Amount",
       "description": "Description",
-      "submit": "Apply Adjustment"
+      "submit": "Adjust"
     },
     "collection": {
       "title": "Cash Collection",
       "amount": "Received Amount",
-      "description": "Notes",
-      "submit": "Record Collection"
+      "description": "Note",
+      "submit": "Add Collection"
     }
   },
   "orders": {
     "title": "Orders",
-    "subtitle": "Manage all customer orders",
-    "newOrder": "Create Order",
-    "searchPlaceholder": "Search by Customer Name or Order ID...",
+    "subtitle": "Customer order management",
+    "newOrder": "New Order",
+    "searchPlaceholder": "Search by customer name or order ID...",
     "tabs": {
       "all": "All",
       "active": "Active",
@@ -150,7 +150,7 @@
       "action": "Action"
     },
     "form": {
-      "customerSection": "Customer Information",
+      "customerSection": "Customer Info",
       "selectCustomer": "Select Existing Customer",
       "newCustomer": "New Customer",
       "orderDetails": "Order Details",
@@ -173,7 +173,7 @@
       "pricing": "Pricing",
       "qty": "Quantity",
       "ratePerPiece": "Rate per Piece (৳)",
-      "total": "Total Amount (৳)",
+      "total": "Total (৳)",
       "notes": "Notes",
       "submit": "Place Order",
       "creating": "Creating..."
@@ -184,7 +184,7 @@
       "customerInfo": "Customer Info",
       "orderInfo": "Order Info",
       "productInfo": "Product Info",
-      "statusUpdate": "Update Status",
+      "statusUpdate": "Status Update",
       "timeline": "Activity Timeline",
       "print": "Print Summary",
       "changeStatus": "Change Status",
@@ -196,19 +196,19 @@
     "status": {
       "order_placed": "Order Placed",
       "designing": "Designing",
-      "design_waiting_confirmation": "Waiting Design Confirm",
+      "design_waiting_confirmation": "Awaiting Design Confirmation",
       "design_confirmed": "Design Confirmed",
-      "waiting_for_plate": "Waiting For Plate",
+      "waiting_for_plate": "Awaiting Plate",
       "plate_done": "Plate Done",
-      "waiting_stock": "Waiting Stock",
-      "waiting_print": "Waiting Print",
+      "waiting_stock": "Awaiting Stock",
+      "waiting_print": "Awaiting Print",
       "one_color_done": "1 Color Done",
       "drying": "Drying",
       "two_color_done": "2 Color Done",
-      "waiting_handle": "Waiting Handle",
+      "waiting_handle": "Awaiting Handle",
       "handle_done": "Handle Done",
-      "ready_delivery": "Ready For Delivery",
-      "on_the_way": "On The Way",
+      "ready_delivery": "Ready for Delivery",
+      "on_the_way": "On the Way",
       "delivered": "Delivered",
       "canceled": "Canceled"
     }

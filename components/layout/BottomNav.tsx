@@ -41,30 +41,56 @@ export function BottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-[#0a0f0a]/90 backdrop-blur-lg border-t border-emerald-900/40 z-40 pb-safe animate-pulse">
+        <div className="flex items-center justify-around h-full px-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="w-10 h-10 bg-emerald-900/30 rounded-lg"></div>
+          ))}
+        </div>
+      </nav>
+    );
+  }
 
   const role = profile.role;
-  const privileges = profile.privileges || [];
+  let privileges: any = {};
+  if (typeof profile.privileges === 'string') {
+    try { privileges = JSON.parse(profile.privileges); } catch (e) {}
+  } else if (profile.privileges) {
+    privileges = profile.privileges;
+  }
 
   const isVisible = (id: string) => {
     if (role === 'admin') return true;
+
     if (role === 'manager') {
-      const isOrderManager = privileges.includes('order_manager');
-      const isDeliveryManager = privileges.includes('delivery_manager');
+      const isOrderManager = (Array.isArray(privileges) ? privileges.includes('order_manager') : privileges?.order_manager === true);
+      const isDeliveryManager = (Array.isArray(privileges) ? privileges.includes('delivery_manager') : privileges?.delivery_manager === true);
+
       switch (id) {
         case 'dashboard':
         case 'orders':
-        case 'kanban': return isOrderManager || isDeliveryManager;
+        case 'kanban':
+          return isOrderManager || isDeliveryManager;
         case 'customers':
         case 'stock':
         case 'cash':
-        case 'reports': return isOrderManager;
-        default: return false;
+        case 'reports':
+        case 'activity':
+          return isOrderManager;
+        case 'salary':
+        case 'settings':
+          return false;
+        default:
+          return false;
       }
     }
+
     if (role === 'staff') {
       return id === 'dashboard' || id === 'orders';
     }
+
     return false;
   };
 
@@ -79,7 +105,7 @@ export function BottomNav() {
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#0a0f0a]/90 backdrop-blur-lg border-t border-emerald-900/40 z-40 pb-safe">
         <div className="flex items-center justify-around h-16 px-2">
           {displayPrimary.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname?.startsWith(item.href) || false;
             const Icon = item.icon;
             return (
               <Link
@@ -143,7 +169,7 @@ export function BottomNav() {
 
               <div className="grid grid-cols-3 gap-4 mb-8">
                 {visibleSecondary.map((item) => {
-                  const isActive = pathname.startsWith(item.href);
+                  const isActive = pathname?.startsWith(item.href) || false;
                   const Icon = item.icon;
                   return (
                     <Link
