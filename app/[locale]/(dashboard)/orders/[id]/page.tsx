@@ -1,0 +1,224 @@
+import { getOrderById } from "@/lib/actions/orders";
+import { getTranslations } from "next-intl/server";
+import { format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrderStatusUpdate } from "@/components/orders/OrderStatusUpdate";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function OrderDetailPage({
+  params: { id },
+}: {
+  params: { id: string };
+}) {
+  const t = await getTranslations("orders");
+  const order = await getOrderById(id);
+  const supabase = await createClient();
+  
+  // Fetch activity logs for this order
+  const { data: logs } = await supabase
+    .from("activity_logs")
+    .select("*, profile:profiles(full_name)")
+    .eq("entity_type", "orders")
+    .eq("entity_id", id)
+    .order("created_at", { ascending: false });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "order_placed":
+        return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/50">{t(`status.${status}`)}</Badge>;
+      case "delivered":
+        return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50">{t(`status.${status}`)}</Badge>;
+      case "canceled":
+        return <Badge className="bg-red-500/20 text-red-300 border-red-500/50">{t(`status.${status}`)}</Badge>;
+      case "ready_delivery":
+      case "on_the_way":
+        return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/50">{t(`status.${status}`)}</Badge>;
+      default:
+        return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/50">{t(`status.${status}`)}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto pb-20 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-slate-800 dark:text-emerald-100">
+            {t("detail.title")}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-emerald-500/70 font-mono mt-1">
+            {t("detail.orderId")} {order.id.split("-")[0]}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="border-slate-200 dark:border-emerald-700 text-slate-600 dark:text-emerald-300 hover:bg-slate-50 dark:hover:bg-emerald-900/50">
+            <Printer className="h-4 w-4 mr-2" />
+            {t("detail.print")}
+          </Button>
+          <OrderStatusUpdate orderId={order.id} currentStatus={order.status} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Customer Info */}
+        <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-emerald-100 text-lg font-bold">{t("detail.customerInfo")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-slate-700 dark:text-emerald-100">
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Name:</span>
+              <span className="font-medium text-slate-800 dark:text-emerald-100">{order.customer?.name}</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Phone:</span>
+              <span>{order.customer?.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-emerald-500">Delivery Address:</span>
+              <span className="text-right max-w-[200px] truncate">{order.location}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Order Info */}
+        <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-emerald-100 text-lg font-bold">{t("detail.orderInfo")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-slate-700 dark:text-emerald-100">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Status:</span>
+              {getStatusBadge(order.status)}
+            </div>
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Order Date:</span>
+              <span>{format(new Date(order.order_date), "PP")}</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Delivery Date:</span>
+              <span>{format(new Date(order.delivery_date), "PP")}</span>
+            </div>
+            <div className="flex justify-between pt-2">
+              <span className="text-slate-500 dark:text-emerald-500">Total Amount:</span>
+              <span className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-300">
+                ৳{Number(order.total_amount).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Info */}
+        <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/50 md:col-span-2 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-emerald-100 text-lg font-bold">{t("detail.productInfo")}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-slate-700 dark:text-emerald-100">
+            
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.bagSize")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.product?.bag_size || order.notes?.match(/Size: (.*)/)?.[1] || "Custom"}</div>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.cuttingType")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.cutting_type === 'handle' ? 'Handle Cut' : 'D-Cut'}</div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.gsm")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.gsm} GSM</div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.bodyColor")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.body_color}</div>
+            </div>
+
+            {order.cutting_type === 'handle' && (
+              <div className="space-y-1">
+                <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.handleColor")}</div>
+                <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.handle_color}</div>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.printColorType")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.print_color_type === 'single' ? t("form.singleColor") : t("form.doubleColor")}</div>
+            </div>
+
+            {order.print_color_type === 'double' && order.print_color_config && (
+               <div className="space-y-1 md:col-span-2">
+                 <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.printColorConfig")}</div>
+                 <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.print_color_config.name} ({order.print_color_config.colors.join(' & ')})</div>
+               </div>
+            )}
+
+            <div className="space-y-1 md:col-span-2">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.qty")} & {t("form.ratePerPiece")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50 flex justify-between items-center">
+                <span>{order.qty} pcs</span>
+                <span className="text-slate-500 dark:text-emerald-500">@ ৳{order.rate_per_piece}/pc</span>
+              </div>
+            </div>
+
+          </CardContent>
+          {order.notes && (
+            <div className="px-6 pb-6 pt-2">
+              <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider mb-1">{t("form.notes")}</div>
+              <div className="bg-slate-50 dark:bg-emerald-950/30 p-3 rounded-lg border border-slate-200 dark:border-emerald-900/50 text-slate-700 dark:text-emerald-200 text-sm">
+                {order.notes}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Activity Timeline */}
+        <Card className="bg-white dark:bg-[#0a0f0a] border-slate-200 dark:border-emerald-900/50 md:col-span-2 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-emerald-100 text-lg font-bold">{t("detail.timeline")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-emerald-800 before:to-transparent">
+              {logs?.map((log: any, i: number) => (
+                <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  {/* Icon */}
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 dark:border-emerald-700 bg-white dark:bg-emerald-950 shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-slate-500 dark:text-emerald-400 text-xs font-bold">
+                    {i + 1}
+                  </div>
+                  {/* Content */}
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-emerald-900/50 bg-slate-50 dark:bg-emerald-950/30 shadow-sm transition-all hover:shadow-md">
+                    <div className="flex items-center justify-between space-x-2 mb-1">
+                      <div className="font-bold text-slate-800 dark:text-emerald-300">{log.action === 'updated_order_status' ? 'Status Update' : 'Created Order'}</div>
+                      <time className="font-mono text-xs text-slate-500 dark:text-emerald-500">{format(new Date(log.created_at), "PPp")}</time>
+                    </div>
+                    <div className="text-slate-600 dark:text-emerald-100 text-sm mt-2">
+                      {log.action === 'updated_order_status' && (
+                        <span>Changed from <strong className="text-slate-800 dark:text-emerald-400 bg-white dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-slate-200 dark:border-emerald-800/50">{t(`status.${log.details?.from}`)}</strong> to <strong className="text-slate-800 dark:text-emerald-400 bg-white dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-slate-200 dark:border-emerald-800/50">{t(`status.${log.details?.to}`)}</strong></span>
+                      )}
+                      {log.action === 'created_order' && (
+                        <span>Order created with total ৳{log.details?.total?.toLocaleString('en-IN')}</span>
+                      )}
+                    </div>
+                    <div className="text-slate-400 dark:text-emerald-500 text-xs mt-3 flex items-center gap-1">
+                      <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-emerald-800/50 flex items-center justify-center text-[10px] text-slate-600 dark:text-emerald-300">
+                        {log.profile?.full_name?.charAt(0) || 'S'}
+                      </span>
+                      {log.profile?.full_name || 'System'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {logs?.length === 0 && (
+              <div className="text-center text-slate-500 dark:text-emerald-500 py-8 bg-slate-50 dark:bg-emerald-900/10 rounded-xl border border-slate-100 dark:border-emerald-900/30 border-dashed">No activity recorded yet.</div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
