@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { getCashSummary, getCashTransactions } from "@/lib/actions/cash";
 import { getExpenseCategories } from "@/lib/actions/settings";
 import { getManagers } from "@/lib/actions/users";
+import { getSuppliers } from "@/lib/actions/suppliers";
+import { getCustomers } from "@/lib/actions/customers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDownRight, ArrowUpRight, Wallet, HandCoins, ArrowUpDown, Banknote } from "lucide-react";
 import CashClient from "@/components/cash/CashClient";
@@ -19,6 +21,10 @@ export default async function CashPage({
   const transactions = await getCashTransactions(tab);
   const expenseCategories = await getExpenseCategories();
   const employees = await getManagers();
+  const allSuppliers = await getSuppliers();
+  const suppliers = (allSuppliers || []).map(s => ({ id: s.id, name: s.name, balance: s.balance || 0 }));
+  const allCustomers = await getCustomers();
+  const customers = (allCustomers || []).map(c => ({ id: c.id, name: c.name, phone: c.phone, balance: c.balance || 0 }));
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
@@ -108,6 +114,8 @@ export default async function CashPage({
         cashInHand={summary.cashInHand}
         expenseCategories={expenseCategories}
         employees={employees}
+        suppliers={suppliers}
+        customers={customers}
       />
 
     </div>

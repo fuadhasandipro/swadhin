@@ -15,7 +15,9 @@ import {
   BarChart3, 
   Wallet, 
   History, 
-  Settings
+  Settings,
+  Truck,
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -28,8 +30,10 @@ const primaryItems = [
 ];
 
 const secondaryItems = [
+  { href: '/deliveries', label: 'ডেলিভারি', icon: Send, id: 'deliveries' },
   { href: '/kanban', label: 'কানবান', icon: Kanban, id: 'kanban' },
   { href: '/customers', label: 'গ্রাহক', icon: Users, id: 'customers' },
+  { href: '/suppliers', label: 'সরবরাহকারী', icon: Truck, id: 'suppliers' },
   { href: '/reports', label: 'রিপোর্ট', icon: BarChart3, id: 'reports' },
   { href: '/salary', label: 'বেতন', icon: Wallet, id: 'salary' },
   { href: '/activity', label: 'লগ', icon: History, id: 'activity' },
@@ -74,6 +78,7 @@ export function BottomNav() {
         case 'kanban':
           return isOrderManager || isDeliveryManager;
         case 'customers':
+        case 'suppliers':
         case 'stock':
         case 'cash':
         case 'reports':

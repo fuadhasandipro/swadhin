@@ -12,9 +12,9 @@ import toast from "react-hot-toast";
 export function GeneralSettingsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [settings, setSettings] = useState({
-    app_name: "Swadhin Enterprise",
+    app_name: "Swadhin Enterprize",
     low_stock_threshold: "10",
     default_delivery_days: "10",
     currency_symbol: "৳"
@@ -46,7 +46,7 @@ export function GeneralSettingsTab() {
       await updateSetting('low_stock_threshold', settings.low_stock_threshold);
       await updateSetting('default_delivery_days', settings.default_delivery_days);
       await updateSetting('currency_symbol', settings.currency_symbol);
-      
+
       toast.success("General settings saved successfully!");
     } catch (err: any) {
       toast.error(err.message);
@@ -69,18 +69,18 @@ export function GeneralSettingsTab() {
         <form onSubmit={handleSave} className="space-y-6">
           <div className="space-y-2">
             <Label>Application Display Name</Label>
-            <Input 
+            <Input
               value={settings.app_name}
-              onChange={e => setSettings({...settings, app_name: e.target.value})}
+              onChange={e => setSettings({ ...settings, app_name: e.target.value })}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label>Currency Symbol</Label>
-            <Input 
+            <Input
               value={settings.currency_symbol}
-              onChange={e => setSettings({...settings, currency_symbol: e.target.value})}
+              onChange={e => setSettings({ ...settings, currency_symbol: e.target.value })}
               required
               className="max-w-[150px]"
             />
@@ -88,10 +88,10 @@ export function GeneralSettingsTab() {
 
           <div className="space-y-2">
             <Label>Low Stock Warning Threshold (Quantity)</Label>
-            <Input 
+            <Input
               type="number"
               value={settings.low_stock_threshold}
-              onChange={e => setSettings({...settings, low_stock_threshold: e.target.value})}
+              onChange={e => setSettings({ ...settings, low_stock_threshold: e.target.value })}
               required
               className="max-w-[150px]"
             />
@@ -100,10 +100,10 @@ export function GeneralSettingsTab() {
 
           <div className="space-y-2">
             <Label>Default Delivery Lead Time (Days)</Label>
-            <Input 
+            <Input
               type="number"
               value={settings.default_delivery_days}
-              onChange={e => setSettings({...settings, default_delivery_days: e.target.value})}
+              onChange={e => setSettings({ ...settings, default_delivery_days: e.target.value })}
               required
               className="max-w-[150px]"
             />

@@ -14,7 +14,7 @@ import { format } from "date-fns";
 export function SMSSettingsTab() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // API Token State
   const [apiToken, setApiToken] = useState("");
   const [savingToken, setSavingToken] = useState(false);
@@ -84,7 +84,7 @@ export function SMSSettingsTab() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>API Token</Label>
-              <Input 
+              <Input
                 type="password"
                 value={apiToken}
                 onChange={e => setApiToken(e.target.value)}
@@ -107,7 +107,7 @@ export function SMSSettingsTab() {
             <form onSubmit={handleTestSms} className="space-y-4">
               <div className="space-y-2">
                 <Label>Phone Number</Label>
-                <Input 
+                <Input
                   value={testPhone}
                   onChange={e => setTestPhone(e.target.value)}
                   placeholder="017XXXXXXXX"
@@ -116,10 +116,10 @@ export function SMSSettingsTab() {
               </div>
               <div className="space-y-2">
                 <Label>Message Content</Label>
-                <Input 
+                <Input
                   value={testMessage}
                   onChange={e => setTestMessage(e.target.value)}
-                  placeholder="Hello from Swadhin Enterprise!"
+                  placeholder="Hello from Swadhin Enterprize!"
                   required
                 />
               </div>

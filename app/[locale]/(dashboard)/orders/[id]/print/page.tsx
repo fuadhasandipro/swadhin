@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 export default function PrintInvoicePage() {
   const params = useParams();
   const id = params.id as string;
-  
+
   const [order, setOrder] = useState<any>(null);
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ export default function PrintInvoicePage() {
   useEffect(() => {
     async function loadInvoiceData() {
       const supabase = createClient();
-      
+
       try {
         const [orderRes, appSettings] = await Promise.all([
           supabase
@@ -32,17 +32,17 @@ export default function PrintInvoicePage() {
             .single(),
           getSettings()
         ]);
-        
+
         if (orderRes.data) setOrder(orderRes.data);
         if (appSettings) setSettings(appSettings);
-        
+
       } catch (err) {
         console.error("Failed to load invoice data:", err);
       } finally {
         setLoading(false);
       }
     }
-    
+
     if (id) {
       loadInvoiceData();
     }
@@ -67,7 +67,7 @@ export default function PrintInvoicePage() {
   }
 
   const symbol = settings.currency_symbol || "৳";
-  const appName = settings.app_name || "Enterprise Invoice";
+  const appName = settings.app_name || "Enterprize Invoice";
 
   return (
     <div className="bg-white text-black p-8 max-w-4xl mx-auto font-sans print:p-0 print:max-w-full">
@@ -124,7 +124,7 @@ export default function PrintInvoicePage() {
           <tr className="border-b border-gray-200">
             <td className="py-4 px-2">
               <div className="font-bold mb-1">
-                {order.product?.bag_size || order.notes?.match(/Size: (.*)/)?.[1] || "Custom Bag"} 
+                {order.product?.bag_size || order.notes?.match(/Size: (.*)/)?.[1] || "Custom Bag"}
                 <span className="text-gray-500 font-normal ml-2">({order.gsm} GSM)</span>
               </div>
               <div className="text-sm text-gray-600 flex gap-4 mt-1">

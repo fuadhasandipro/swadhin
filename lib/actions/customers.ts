@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getCustomers(searchQuery?: string) {
   const supabase = await createClient();
-  let query = supabase.from('customers').select('*').order('created_at', { ascending: false });
+  let query = supabase.from('customers').select('*, orders(count)').order('created_at', { ascending: false });
   
   if (searchQuery) {
     query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);

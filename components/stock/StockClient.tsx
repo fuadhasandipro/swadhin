@@ -5,13 +5,14 @@ import { Product, Profile } from "@/types";
 import { AddStockDialog } from "./AddStockDialog";
 import { RestockDialog } from "./RestockDialog";
 import { deleteProduct } from "@/lib/actions/stock";
-import { Search, Plus, PackagePlus, Trash2, AlertTriangle, Package, Loader2 } from "lucide-react";
+import { Search, Plus, PackagePlus, Trash2, AlertTriangle, Package, Loader2, Tag } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -20,6 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  raw_material: "Raw Material",
+  ink: "Ink",
+  plate: "Plate",
+  packaging: "Packaging",
+  other: "Other",
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  raw_material: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  ink: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  plate: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  packaging: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  other: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
 
 export function StockClient({ products, profile }: { products: Product[], profile: Profile | null }) {
   const t = useTranslations('stock');
@@ -34,6 +51,11 @@ export function StockClient({ products, profile }: { products: Product[], profil
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const totalValue = products.reduce((acc, p) => acc + (p.qty * p.cost_per_piece), 0);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+
+  const filteredProducts = activeCategory === "all"
+    ? products
+    : products.filter(p => (p.category || 'raw_material') === activeCategory);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const params = new URLSearchParams(searchParams);
@@ -82,7 +104,6 @@ export function StockClient({ products, profile }: { products: Product[], profil
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-background"
             />
           </div>
-          
           <Button 
             onClick={() => setIsAddOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap"
@@ -90,6 +111,24 @@ export function StockClient({ products, profile }: { products: Product[], profil
             <Plus size={18} /> <span className="hidden sm:inline">{t('newStock')}</span>
           </Button>
         </div>
+      </div>
+
+      {/* Category Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {["all", "raw_material", "ink", "plate", "packaging", "other"].map(cat => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all",
+              activeCategory === cat
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                : "bg-white dark:bg-emerald-950/30 text-slate-600 dark:text-emerald-300 border-slate-200 dark:border-emerald-900/50 hover:bg-slate-50"
+            )}
+          >
+            {cat === "all" ? "সব" : CATEGORY_LABELS[cat] || cat}
+          </button>
+        ))}
       </div>
 
       {/* Summary Card */}
@@ -107,6 +146,8 @@ export function StockClient({ products, profile }: { products: Product[], profil
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold">{t('columns.size')}</TableHead>
+              <TableHead className="font-semibold">Cut</TableHead>
+              <TableHead className="font-semibold">Category</TableHead>
               <TableHead className="font-semibold">{t('columns.color')}</TableHead>
               <TableHead className="font-semibold">{t('columns.gsm')}</TableHead>
               <TableHead className="font-semibold text-right">{t('columns.cost')}</TableHead>
@@ -116,9 +157,10 @@ export function StockClient({ products, profile }: { products: Product[], profil
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => {
+            {filteredProducts.map((product) => {
               const isLowStock = product.qty < 10;
               const value = product.qty * product.cost_per_piece;
+              const cat = product.category || 'raw_material';
               
               return (
                 <TableRow key={product.id} className={cn(
@@ -128,6 +170,12 @@ export function StockClient({ products, profile }: { products: Product[], profil
                   <TableCell className="font-medium flex items-center gap-2">
                     {isLowStock && <AlertTriangle size={16} className="text-destructive" />}
                     {product.bag_size}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground capitalize">{product.cutting_type || 'handle'}</TableCell>
+                  <TableCell>
+                    <Badge className={cn("text-[10px] border-none", CATEGORY_COLORS[cat])}>
+                      {CATEGORY_LABELS[cat] || cat}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{product.bag_color}</TableCell>
                   <TableCell className="text-muted-foreground">{product.gsm}</TableCell>
@@ -170,7 +218,7 @@ export function StockClient({ products, profile }: { products: Product[], profil
             })}
             {products.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   {t('noStock')}
                 </TableCell>
               </TableRow>
@@ -181,9 +229,10 @@ export function StockClient({ products, profile }: { products: Product[], profil
 
       {/* Cards (Mobile) */}
       <div className="md:hidden space-y-4">
-        {products.map((product) => {
+        {filteredProducts.map((product) => {
           const isLowStock = product.qty < 10;
           const value = product.qty * product.cost_per_piece;
+          const cat = product.category || 'raw_material';
           
           return (
             <Card key={product.id} className={cn(
@@ -199,7 +248,9 @@ export function StockClient({ products, profile }: { products: Product[], profil
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       {product.bag_size} <span className="text-sm font-normal text-muted-foreground">({product.bag_color})</span>
                     </h3>
+                    <p className="text-sm text-muted-foreground mt-1 capitalize">Cut: {product.cutting_type || 'handle'}</p>
                     <p className="text-sm text-muted-foreground mt-1">GSM: {product.gsm} | ৳{product.cost_per_piece}/পিস</p>
+                    <Badge className={cn("text-[10px] border-none mt-1", CATEGORY_COLORS[cat])}>{CATEGORY_LABELS[cat] || cat}</Badge>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">{t('columns.qty')}</p>

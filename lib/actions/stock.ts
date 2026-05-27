@@ -19,15 +19,19 @@ export async function getProducts(searchQuery?: string) {
   return data;
 }
 
-export async function createProduct(data: { bag_size: string; bag_color: string; gsm: number; cost_per_piece: number; qty: number }) {
+export async function createProduct(data: { bag_size: string; bag_color: string; gsm: number; cost_per_piece: number; qty: number; cutting_type: string; category?: string; supplier_id?: string }) {
   const profile = await getCurrentProfile();
   if (!profile) throw new Error("Unauthorized");
   
   const supabase = await createClient();
   
+  const insertData: any = { ...data, bag_size: data.bag_size };
+  if (!data.category) insertData.category = 'raw_material';
+  if (!data.supplier_id) delete insertData.supplier_id;
+
   const { data: newProduct, error } = await supabase
     .from('products')
-    .insert([data])
+    .insert([insertData])
     .select()
     .single();
     
@@ -45,7 +49,7 @@ export async function createProduct(data: { bag_size: string; bag_color: string;
   return newProduct;
 }
 
-export async function updateProduct(id: string, data: { bag_size?: string; bag_color?: string; gsm?: number; cost_per_piece?: number }) {
+export async function updateProduct(id: string, data: { bag_size?: string; bag_color?: string; gsm?: number; cost_per_piece?: number; cutting_type?: string; category?: string; supplier_id?: string | null }) {
   const profile = await getCurrentProfile();
   if (!profile) throw new Error("Unauthorized");
   
@@ -69,35 +73,72 @@ export async function updateProduct(id: string, data: { bag_size?: string; bag_c
   revalidatePath('/stock');
 }
 
-export async function restockProduct(id: string, addQty: number) {
+export async function restockProduct(
+  id: string,
+  addQty: number,
+  supplierId?: string,
+  paidAmount?: number,
+  description?: string,
+  costPerPiece?: number,
+) {
   const profile = await getCurrentProfile();
   if (!profile) throw new Error("Unauthorized");
   if (addQty <= 0) throw new Error("Quantity must be positive");
 
   const supabase = await createClient();
   
-  const { data: product } = await supabase.from('products').select('qty').eq('id', id).single();
+  const { data: product } = await supabase.from('products').select('qty, cost_per_piece, bag_size, bag_color').eq('id', id).single();
   if (!product) throw new Error("Product not found");
 
   const newQty = product.qty + addQty;
+  const effectiveCost = costPerPiece ?? product.cost_per_piece;
+  const totalCost = addQty * effectiveCost;
+  const paid = paidAmount ?? 0;
+  const desc = description || `Restock: ${product.bag_size} - ${product.bag_color} (${addQty} pcs)`;
 
-  const { error } = await supabase
-    .from('products')
-    .update({ qty: newQty })
-    .eq('id', id);
+  // Update product qty (and optionally cost)
+  const updateData: any = { qty: newQty };
+  if (costPerPiece !== undefined) updateData.cost_per_piece = costPerPiece;
+  if (supplierId) updateData.supplier_id = supplierId;
 
+  const { error } = await supabase.from('products').update(updateData).eq('id', id);
   if (error) throw new Error("Failed to restock: " + error.message);
+
+  // If supplier selected, record purchase via supplier action logic
+  if (supplierId && totalCost > 0) {
+    const { recordSupplierPurchase } = await import('./suppliers');
+    await recordSupplierPurchase({
+      supplier_id: supplierId,
+      amount: totalCost,
+      description: desc,
+      paid_amount: paid,
+    });
+  } else if (paid > 0) {
+    // No supplier but cash was paid — just record cash out
+    const cashPayload: any = {
+      type: 'out',
+      category: 'expense',
+      amount: paid,
+      description: desc,
+      created_by: profile.id,
+    };
+    await supabase.from('cash_transactions').insert([cashPayload]);
+  }
 
   await logActivity(supabase, {
     userId: profile.id,
     action: 'RESTOCK_PRODUCT',
     entityType: 'products',
     entityId: id,
-    details: { previous_qty: product.qty, added_qty: addQty, new_qty: newQty }
+    details: { previous_qty: product.qty, added_qty: addQty, new_qty: newQty, supplier_id: supplierId, total_cost: totalCost, paid }
   });
 
   revalidatePath('/stock');
   revalidatePath('/dashboard');
+  if (supplierId) {
+    revalidatePath('/suppliers');
+    revalidatePath('/cash');
+  }
 }
 
 export async function deleteProduct(id: string) {

@@ -23,7 +23,7 @@ export async function sendSMS(to: string, message: string) {
       .from("sms_logs")
       .select("*", { count: "exact", head: true })
       .gte("sent_at", oneMinuteAgo);
-      
+
     if (count !== null && count >= 10) {
       console.warn("SMS rate limit exceeded.");
       return { success: false, error: "Rate limit exceeded. Try again in a minute." };
@@ -75,10 +75,10 @@ export async function sendOrderPlacedSMS(orderId: string, phone: string, deliver
     month: "short",
     year: "numeric"
   }).format(new Date(deliveryDate));
-  
+
   const shortId = orderId.split('-')[0].toUpperCase();
-  const message = `আপনার অর্ডার #${shortId} গৃহীত হয়েছে। ডেলিভারি তারিখ: ${dateStr}। ধন্যবাদ, Swadhin Enterprise।`;
-  
+  const message = `আপনার অর্ডার #${shortId} গৃহীত হয়েছে। ডেলিভারি তারিখ: ${dateStr}। ধন্যবাদ, Swadhin Enterprize।`;
+
   return sendSMS(phone, message);
 }
 
@@ -87,7 +87,7 @@ export async function sendOrderPlacedSMS(orderId: string, phone: string, deliver
  */
 export async function sendDeliveredSMS(orderId: string, phone: string, totalAmount: number) {
   const shortId = orderId.split('-')[0].toUpperCase();
-  const message = `আপনার অর্ডার #${shortId} ডেলিভারি সম্পন্ন হয়েছে। মোট: ৳${totalAmount}। ধন্যবাদ, Swadhin Enterprise।`;
-  
+  const message = `আপনার অর্ডার #${shortId} ডেলিভারি সম্পন্ন হয়েছে। মোট: ৳${totalAmount}। ধন্যবাদ, Swadhin Enterprize।`;
+
   return sendSMS(phone, message);
 }

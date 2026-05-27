@@ -11,20 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { PlusCircle, MinusCircle, HandCoins, Search, Calendar as CalendarIcon } from "lucide-react";
 import { AddIncomeDialog } from "./AddIncomeDialog";
 import { AddExpenseDialog } from "./AddExpenseDialog";
-import { CustomerCollectionQuickEntry } from "./CustomerCollectionQuickEntry";
 
 export default function CashClient({ 
   transactions, 
   currentTab, 
   cashInHand, 
   expenseCategories, 
-  employees 
+  employees,
+  suppliers,
+  customers
 }: { 
   transactions: any[], 
   currentTab: string, 
   cashInHand: number, 
   expenseCategories: {id: string, name: string}[],
-  employees: any[] 
+  employees: any[],
+  suppliers: { id: string; name: string; balance: number }[],
+  customers: { id: string; name: string; phone: string; balance: number }[]
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -32,7 +35,6 @@ export default function CashClient({
 
   const [isIncomeOpen, setIsIncomeOpen] = useState(false);
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
-  const [isCollectionOpen, setIsCollectionOpen] = useState(false);
 
   const handleTabChange = (tab: string) => {
     router.push(`/cash?tab=${tab}`);
@@ -48,15 +50,12 @@ export default function CashClient({
   return (
     <>
       <div className="flex flex-col gap-4 mb-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
+        <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
           <Button onClick={() => setIsIncomeOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm w-full text-xs sm:text-sm h-10 px-2">
             <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" /> Income
           </Button>
           <Button onClick={() => setIsExpenseOpen(true)} variant="destructive" className="shadow-sm w-full text-xs sm:text-sm h-10 px-2">
             <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" /> Expense
-          </Button>
-          <Button onClick={() => setIsCollectionOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm w-full text-xs sm:text-sm col-span-2 sm:col-span-1 h-10 px-2">
-            <HandCoins className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" /> Collection
           </Button>
         </div>
       </div>
@@ -200,7 +199,9 @@ export default function CashClient({
       <AddIncomeDialog 
         isOpen={isIncomeOpen} 
         onClose={() => setIsIncomeOpen(false)} 
-        onSuccess={() => router.refresh()}
+        customers={customers}
+        suppliers={suppliers}
+        onSuccess={() => router.refresh()} 
       />
       
       <AddExpenseDialog 
@@ -209,12 +210,7 @@ export default function CashClient({
         cashInHand={cashInHand}
         expenseCategories={expenseCategories}
         employees={employees}
-        onSuccess={() => router.refresh()}
-      />
-      
-      <CustomerCollectionQuickEntry 
-        isOpen={isCollectionOpen} 
-        onClose={() => setIsCollectionOpen(false)} 
+        suppliers={suppliers}
         onSuccess={() => router.refresh()}
       />
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,13 +11,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 
 const addStockSchema = z.object({
   bag_size: z.string().regex(/^\d{1,2}x\d{1,2}$/i, "Format must be like 13x15"),
   bag_color: z.string().min(2, "Required"),
   gsm: z.number().min(30).max(200),
   cost_per_piece: z.number().min(0.01, "Cost must be > 0"),
-  qty: z.number().int().min(1, "Quantity must be > 0")
+  qty: z.number().int().min(1, "Quantity must be > 0"),
+  cutting_type: z.string().min(1, "Required"),
+  category: z.string().min(1, "Required"),
+  supplier_id: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof addStockSchema>;
@@ -28,11 +32,18 @@ const GSMS = [70, 80, 90, 100];
 
 export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
-  
+
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(addStockSchema),
-    defaultValues: { bag_size: "", bag_color: "White", gsm: 70, cost_per_piece: undefined, qty: undefined as any }
+    defaultValues: { bag_size: "", bag_color: "White", gsm: 70, cost_per_piece: undefined, qty: undefined as any, cutting_type: "handle", category: "raw_material", supplier_id: "" }
   });
+
+  const [suppliers, setSuppliers] = useState<{ id: string, name: string }[]>([]);
+  useEffect(() => {
+    createClient().from('suppliers').select('id, name').order('name').then(({ data }) => {
+      if (data) setSuppliers(data);
+    });
+  }, []);
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
@@ -50,6 +61,14 @@ export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: 
     setError(null);
     onClose();
   };
+
+  const CATEGORIES = [
+    { value: "raw_material", label: "কাঁচামাল (Raw Material / Bags)" },
+    { value: "ink", label: "কালি (Ink)" },
+    { value: "plate", label: "প্লেট (Plate)" },
+    { value: "packaging", label: "প্যাকেজিং (Packaging)" },
+    { value: "other", label: "অন্যান্য (Other)" },
+  ];
 
   const currentSize = watch("bag_size");
   const currentColor = watch("bag_color");
@@ -103,6 +122,44 @@ export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: 
                 ))}
               </div>
             </div>
+
+            {/* Category */}
+            <div className="space-y-2">
+              <Label>ক্যাটাগরি (Category)</Label>
+              <select
+                {...register("category")}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
+              >
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+
+            {/* Cutting Type */}
+            <div className="space-y-2">
+              <Label>Cutting Type</Label>
+              <select
+                {...register("cutting_type")}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
+              >
+                <option value="handle">Handle Cut</option>
+                <option value="d-cut">D-Cut</option>
+              </select>
+              {errors.cutting_type && <p className="text-destructive text-xs">{errors.cutting_type.message}</p>}
+            </div>
+
+            {/* Supplier */}
+            {suppliers.length > 0 && (
+              <div className="space-y-2">
+                <Label>সরবরাহকারী (Supplier) - Optional</Label>
+                <select
+                  {...register("supplier_id")}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
+                >
+                  <option value="">-- None --</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+            )}
 
             {/* GSM & Cost */}
             <div className="grid grid-cols-2 gap-4">

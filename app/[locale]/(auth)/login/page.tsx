@@ -17,7 +17,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
     const result = await loginAction(data.phone, data.password);
-    
+
     if (result.error) {
       setError(result.error);
     } else {
@@ -45,11 +45,11 @@ export default function LoginPage() {
       {/* Left Panel - Green Side */}
       <div className="hidden md:flex flex-col w-[45%] bg-[#0e6344] relative overflow-hidden items-center justify-center text-white">
         {/* Dot Pattern Overlay */}
-        <div 
-          className="absolute inset-0 opacity-10 pointer-events-none" 
-          style={{ 
-            backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', 
-            backgroundSize: '24px 24px' 
+        <div
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
           }}
         />
 
@@ -57,11 +57,11 @@ export default function LoginPage() {
           <div className="w-24 h-24 bg-[#147a54] rounded-[2rem] flex items-center justify-center mb-8 border border-[#1b8f64] shadow-2xl">
             <Leaf size={40} className="text-white fill-white" />
           </div>
-          
+
           <h1 className="text-4xl md:text-5xl font-bold mb-6 font-heading tracking-tight">Swadhin</h1>
-          
+
           <p className="text-[#a1d8c1] max-w-[280px] text-center text-lg leading-relaxed">
-            The next generation of enterprise management. Stable, fast, and secure.
+            The next generation of Enterprize management. Stable, fast, and secure.
           </p>
         </div>
 
@@ -80,11 +80,11 @@ export default function LoginPage() {
 
       {/* Right Panel - White Side */}
       <div className="flex-1 flex flex-col items-center justify-center relative min-h-screen p-4">
-        
+
         {/* Mobile Header (Only visible on small screens) */}
         <div className="md:hidden flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-[#0e6344] rounded-2xl flex items-center justify-center mb-4">
-             <Leaf size={28} className="text-white fill-white" />
+            <Leaf size={28} className="text-white fill-white" />
           </div>
           <h1 className="text-3xl font-bold text-[#0e6344] font-heading">Swadhin</h1>
         </div>
@@ -92,7 +92,7 @@ export default function LoginPage() {
         {/* Login Card */}
         <div className="w-full max-w-[420px] p-8 md:p-10 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 z-10">
           <h2 className="text-3xl font-bold text-slate-800 mb-2 font-heading tracking-tight">লগইন</h2>
-          <p className="text-slate-500 mb-8 text-sm">Access your enterprise dashboard</p>
+          <p className="text-slate-500 mb-8 text-sm">Access your Enterprize dashboard</p>
 
           {error && (
             <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-xl mb-6 text-sm text-center font-medium">
@@ -156,7 +156,7 @@ export default function LoginPage() {
 
         {/* Footer copyright */}
         <div className="absolute bottom-8 text-[11px] text-slate-400 font-bold tracking-[0.15em] uppercase text-center w-full">
-          © 2026 SWADHIN - POWERING THE ENTERPRISE
+          © 2026 SWADHIN - POWERING THE Enterprize
         </div>
       </div>
     </div>

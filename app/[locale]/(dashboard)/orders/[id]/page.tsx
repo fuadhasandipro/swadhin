@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { getColorHex } from "@/lib/utils/colors";
 
 export default async function OrderDetailPage({
   params,
@@ -27,19 +28,38 @@ export default async function OrderDetailPage({
     .eq("entity_id", id)
     .order("created_at", { ascending: false });
 
+  const { data: colorConfigs } = await supabase.from('print_color_configs').select('*');
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "order_placed":
-        return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/50">{t(`status.${status}`)}</Badge>;
-      case "delivered":
-        return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/50">{t(`status.${status}`)}</Badge>;
-      case "canceled":
-        return <Badge className="bg-red-500/20 text-red-300 border-red-500/50">{t(`status.${status}`)}</Badge>;
+        return <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-400">{t(`status.${status}`)}</Badge>;
+      case "designing":
+      case "design_waiting_confirmation":
+        return <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-400">{t(`status.${status}`)}</Badge>;
+      case "design_confirmed":
+      case "waiting_for_plate":
+      case "plate_done":
+        return <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400">{t(`status.${status}`)}</Badge>;
+      case "waiting_stock":
+        return <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">{t(`status.${status}`)}</Badge>;
+      case "waiting_print":
+      case "one_color_done":
+      case "drying":
+      case "two_color_done":
+        return <Badge variant="secondary" className="bg-orange-500/10 text-orange-700 dark:text-orange-400">{t(`status.${status}`)}</Badge>;
+      case "waiting_handle":
+      case "handle_done":
+        return <Badge variant="secondary" className="bg-pink-500/10 text-pink-700 dark:text-pink-400">{t(`status.${status}`)}</Badge>;
       case "ready_delivery":
       case "on_the_way":
-        return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/50">{t(`status.${status}`)}</Badge>;
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400">{t(`status.${status}`)}</Badge>;
+      case "delivered":
+        return <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">{t(`status.${status}`)}</Badge>;
+      case "canceled":
+        return <Badge variant="destructive">{t(`status.${status}`)}</Badge>;
       default:
-        return <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/50">{t(`status.${status}`)}</Badge>;
+        return <Badge variant="outline">{t(`status.${status}`)}</Badge>;
     }
   };
 
@@ -138,28 +158,39 @@ export default async function OrderDetailPage({
 
             <div className="space-y-1">
               <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.bodyColor")}</div>
-              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.body_color}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50 flex items-center h-10 gap-2 px-3">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: getColorHex(order.body_color, colorConfigs || []) }}>{order.body_color}</div>
+              </div>
             </div>
 
             {order.cutting_type === 'handle' && (
               <div className="space-y-1">
                 <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.handleColor")}</div>
-                <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.handle_color}</div>
+                <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50 flex items-center h-10 gap-2 px-3">
+                  <div className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: getColorHex(order.handle_color, colorConfigs || []) }}>{order.handle_color}</div>
+                </div>
               </div>
             )}
 
             <div className="space-y-1">
               <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.printColorType")}</div>
-              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">{order.print_color_type === 'single' ? t("form.singleColor") : t("form.doubleColor")}</div>
+              <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50 flex items-center h-10 px-3">{order.print_color_type === 'single' ? t("form.singleColor") : t("form.doubleColor")}</div>
             </div>
 
             {order.print_color_config && (
               <div className="space-y-1 md:col-span-2">
                 <div className="text-xs text-slate-500 dark:text-emerald-500 uppercase tracking-wider">{t("form.printColorConfig")}</div>
-                <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50">
-                  {order.print_color_config.color ||
-                    (order.print_color_config.colors ? `${order.print_color_config.name} (${order.print_color_config.colors.join(' & ')})` :
-                      (typeof order.print_color_config === 'string' ? order.print_color_config : JSON.stringify(order.print_color_config)))}
+                <div className="font-medium text-slate-800 dark:text-emerald-100 bg-slate-50 dark:bg-emerald-900/20 p-2 rounded-lg border border-slate-100 dark:border-emerald-900/50 flex items-center h-10 gap-2 px-3">
+                  {order.print_color_config.type === "multi" || order.print_color_config.color === "multi" || (order.print_color_config.color && order.print_color_config.color.includes("-")) ? (
+                    <div className="flex items-center gap-1.5 flex-wrap whitespace-nowrap">
+                      {order.print_color_config.code1 && <div className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: order.print_color_config.code1 }}>{order.print_color_config.color.split(/[-&]/).map((s: string) => s.trim())[0] || "Color 1"}</div>}
+                      {order.print_color_config.code2 && <div className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: order.print_color_config.code2 }}>{order.print_color_config.color.split(/[-&]/).map((s: string) => s.trim())[1] || "Color 2"}</div>}
+                    </div>
+                  ) : order.print_color_config.code1 || order.print_color_config.code ? (
+                    <div className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: order.print_color_config.code1 || order.print_color_config.code }}>{order.print_color_config.color || order.print_color_config.name}</div>
+                  ) : (
+                    <span className="text-sm">{order.print_color_config.color || order.print_color_config.name}</span>
+                  )}
                 </div>
               </div>
             )}

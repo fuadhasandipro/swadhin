@@ -46,6 +46,45 @@ export async function createOrder(data: any) {
     customerId = newCustomer.id;
   }
 
+  let finalProductId = data.product_id;
+
+  // Auto-create virtual stock if custom bag is used
+  if (!finalProductId && data.manual_bag_size) {
+    const bagSize = data.manual_bag_size.trim();
+    
+    // Check if a matching product exists
+    const { data: existingProduct } = await supabase
+      .from('products')
+      .select('id')
+      .eq('bag_size', bagSize)
+      .eq('bag_color', data.body_color)
+      .eq('gsm', data.gsm)
+      .eq('cutting_type', data.cutting_type)
+      .maybeSingle();
+
+    if (existingProduct) {
+      finalProductId = existingProduct.id;
+    } else {
+      // Create new virtual product with 0 qty
+      const { data: newProduct, error: prodError } = await supabase
+        .from('products')
+        .insert({
+          bag_size: bagSize,
+          bag_color: data.body_color,
+          gsm: data.gsm,
+          cutting_type: data.cutting_type,
+          category: 'raw_material',
+          qty: 0,
+          cost_per_piece: 0 // Will be updated when actually purchased
+        })
+        .select('id')
+        .single();
+        
+      if (prodError) throw new Error("Failed to create virtual stock: " + prodError.message);
+      finalProductId = newProduct.id;
+    }
+  }
+
   // Insert Order
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -61,7 +100,7 @@ export async function createOrder(data: any) {
       handle_color: data.handle_color || '',
       print_color_type: data.print_color_type,
       print_color_config: data.print_color_config || null,
-      product_id: data.product_id || null,
+      product_id: finalProductId || null,
       rate_per_piece: data.rate_per_piece,
       qty: data.qty,
       total_amount: data.rate_per_piece * data.qty,
@@ -236,7 +275,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
 export async function getOrders(search?: string, statusFilter?: string) {
   const supabase = await createClient();
-  let query = supabase.from('orders').select('*, customer:customers(name, phone)');
+  let query = supabase.from('orders').select('*, customer:customers(name, phone), product:products(bag_size)');
 
   if (statusFilter && statusFilter !== 'all') {
     if (statusFilter === 'active') {
@@ -309,4 +348,22 @@ export async function deleteOrder(id: string) {
 
   revalidatePath('/orders');
   return true;
+}
+
+export async function getDeliverySchedule() {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split('T')[0];
+  
+  // We want orders that are NOT delivered or canceled
+  // AND (delivery_date <= today OR status IN ('ready_delivery', 'on_the_way'))
+  
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, customer:customers(name, phone, address), product:products(bag_size, bag_color, gsm)')
+    .not('status', 'in', '("delivered","canceled")')
+    .or(`delivery_date.lte.${today},status.in.("ready_delivery","on_the_way")`)
+    .order('delivery_date', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data || [];
 }

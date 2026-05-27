@@ -42,26 +42,24 @@ export default function Preloader() {
                 className="absolute w-24 h-24 rounded-full border-2 border-emerald-500"
               />
             ))}
-            
+
             {/* Logo image */}
             <div className="z-10 bg-white dark:bg-[#0a0f0a] rounded-full p-4 relative flex items-center justify-center w-24 h-24">
-              <Image 
-                src="/next.svg" 
-                alt="Swadhin Enterprise Logo" 
-                width={80} 
-                height={80} 
-                className="dark:invert" 
+              <Image
+                src="/next.svg"
+                alt="Swadhin Enterprize Logo"
+                width={80}
+                height={80}
+                className="dark:invert"
               />
             </div>
           </div>
-          
+
           <div className="mt-8 flex flex-col items-center z-10">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">
-              Swadhin Enterprise
+              Swadhin Enterprize
             </h1>
-            <p className="text-emerald-600 dark:text-emerald-400 mt-2 text-lg font-sans">
-              নন-ওভেন ব্যাগ প্রিন্ট
-            </p>
+
           </div>
         </motion.div>
       )}

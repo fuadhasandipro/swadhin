@@ -76,16 +76,47 @@ const getCachedStats = unstable_cache(
     });
   }
 
+  // 7. Supplier Dues (positive balance = we owe them)
+  const { data: suppliersData } = await supabase
+    .from('suppliers')
+    .select('balance');
+
+  let supplierDues = 0; // total we owe suppliers
+  if (suppliersData) {
+    suppliersData.forEach(s => {
+      const bal = Number(s.balance);
+      if (bal > 0) supplierDues += bal;
+    });
+  }
+
   // Total Business Value
-  const totalBusinessValue = stockValue + totalDueFromCustomers - weOweCustomers + cashInHand;
+  const totalBusinessValue = stockValue + totalDueFromCustomers - weOweCustomers - supplierDues + cashInHand;
+
+  const weOweThem = weOweCustomers + supplierDues;
+
+  // Active Orders (Not delivered or canceled)
+  const { count: activeOrdersCount } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .not('status', 'in', '("delivered","canceled")');
+
+  // Deliveries Today (using the exact same logic as getDeliverySchedule)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const { count: deliveriesTodayCount } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .not('status', 'in', '("delivered","canceled")')
+    .or(`delivery_date.lte.${todayStr},status.in.("ready_delivery","on_the_way")`);
 
   return {
     cashIn,
     cashOut,
     cashInHand,
     totalDueFromCustomers,
-    weOweCustomers,
-    totalBusinessValue
+    weOweThem,
+    totalBusinessValue,
+    activeOrders: activeOrdersCount || 0,
+    deliveriesToday: deliveriesTodayCount || 0
   };
 });
 
@@ -168,4 +199,35 @@ export async function getRecentOrders() {
     .limit(5);
     
   return data || [];
+}
+
+export async function getOrderStatusBreakdown() {
+  const supabase = await createClient();
+  const startOfCurrentMonth = startOfMonth(new Date()).toISOString();
+
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('status, order_date')
+    .gte('order_date', startOfCurrentMonth);
+
+  const breakdown = {
+    printing: 0,
+    waitingStock: 0,
+    designConfirmation: 0,
+    readyForDelivery: 0,
+    deliveredThisMonth: 0
+  };
+
+  if (orders) {
+    orders.forEach(o => {
+      const s = o.status;
+      if (['waiting_print', 'one_color_done', 'drying', 'two_color_done'].includes(s)) breakdown.printing++;
+      else if (s === 'waiting_stock') breakdown.waitingStock++;
+      else if (['design_waiting_confirmation', 'design_confirmed', 'designing', 'order_placed', 'waiting_for_plate', 'plate_done'].includes(s)) breakdown.designConfirmation++;
+      else if (['ready_delivery', 'on_the_way', 'waiting_handle', 'handle_done'].includes(s)) breakdown.readyForDelivery++;
+      else if (s === 'delivered') breakdown.deliveredThisMonth++;
+    });
+  }
+
+  return breakdown;
 }

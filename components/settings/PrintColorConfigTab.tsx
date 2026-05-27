@@ -21,12 +21,16 @@ export function PrintColorConfigTab() {
   // New config form state
   const [name, setName] = useState("");
   const [colorType, setColorType] = useState<"single" | "multi" | "handle">("single");
+  const [colorCode, setColorCode] = useState("#059669");
+  const [colorCode2, setColorCode2] = useState("#2563eb");
   const [saving, setSaving] = useState(false);
 
   // Edit config state
   const [editItem, setEditItem] = useState<any>(null);
   const [editName, setEditName] = useState("");
   const [editColorType, setEditColorType] = useState<"single" | "multi" | "handle">("single");
+  const [editColorCode, setEditColorCode] = useState("#059669");
+  const [editColorCode2, setEditColorCode2] = useState("#2563eb");
   const [editing, setEditing] = useState(false);
 
   // Delete config state
@@ -57,13 +61,13 @@ export function PrintColorConfigTab() {
     }
     setSaving(true);
     try {
-      let colorsToSave = [name];
-      if (colorType === "multi") colorsToSave = [name, "multi"];
-      else if (colorType === "handle") colorsToSave = [name, "handle"];
+      const colorsToSave = [name, colorType, colorCode, colorType === "multi" ? colorCode2 : ""];
       
       await addPrintColorConfig(name, colorsToSave);
       toast.success("Color added successfully!");
       setName("");
+      setColorCode("#059669");
+      setColorCode2("#2563eb");
       fetchConfigs();
     } catch (err: any) {
       toast.error(err.message);
@@ -80,9 +84,7 @@ export function PrintColorConfigTab() {
     }
     setEditing(true);
     try {
-      let colorsToSave = [editName];
-      if (editColorType === "multi") colorsToSave = [editName, "multi"];
-      else if (editColorType === "handle") colorsToSave = [editName, "handle"];
+      const colorsToSave = [editName, editColorType, editColorCode, editColorType === "multi" ? editColorCode2 : ""];
       
       await updatePrintColorConfig(editItem.id, editName, colorsToSave);
       toast.success("Color updated successfully!");
@@ -138,6 +140,30 @@ export function PrintColorConfigTab() {
                 className="w-full"
               />
             </div>
+            <div className="space-y-2 flex-none w-20">
+              <Label>{colorType === "multi" ? "Color 1" : "Color"}</Label>
+              <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                <input
+                  type="color"
+                  value={colorCode}
+                  onChange={e => setColorCode(e.target.value)}
+                  className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                />
+              </div>
+            </div>
+            {colorType === "multi" && (
+              <div className="space-y-2 flex-none w-20">
+                <Label>Color 2</Label>
+                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                  <input
+                    type="color"
+                    value={colorCode2}
+                    onChange={e => setColorCode2(e.target.value)}
+                    className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-2 flex-1 w-full">
               <Label>Type</Label>
               <select 
@@ -184,7 +210,19 @@ export function PrintColorConfigTab() {
                   ) : (
                     configs.map(config => (
                       <TableRow key={config.id} className={!config.is_active ? "opacity-50" : ""}>
-                        <TableCell className="font-medium">{config.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {config.colors?.includes("multi") ? (
+                              <div className="flex -space-x-1">
+                                {config.colors?.[2] && <div className="w-4 h-4 rounded-full border shadow-sm relative z-10" style={{ backgroundColor: config.colors[2] }} />}
+                                {config.colors?.[3] && <div className="w-4 h-4 rounded-full border shadow-sm relative z-0" style={{ backgroundColor: config.colors[3] }} />}
+                              </div>
+                            ) : config.colors?.[2] && (
+                              <div className="w-4 h-4 rounded-full border shadow-sm" style={{ backgroundColor: config.colors[2] }} />
+                            )}
+                            {config.name}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={config.colors?.includes("multi") ? "bg-purple-50 text-purple-700" : config.colors?.includes("handle") ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700"}>
                             {config.colors?.includes("multi") ? "Multi Print" : config.colors?.includes("handle") ? "Handle" : "Single Print"}
@@ -207,6 +245,8 @@ export function PrintColorConfigTab() {
                               if (config.colors?.includes("multi")) setEditColorType("multi");
                               else if (config.colors?.includes("handle")) setEditColorType("handle");
                               else setEditColorType("single");
+                              setEditColorCode(config.colors?.[2] || "#059669");
+                              setEditColorCode2(config.colors?.[3] || "#2563eb");
                             }}
                           >
                             <Edit className="w-4 h-4" />
@@ -237,14 +277,40 @@ export function PrintColorConfigTab() {
             <DialogTitle>Edit Color Config</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditConfig} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Color Name</Label>
-              <Input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                placeholder="e.g. Red"
-                required
-              />
+            <div className="flex gap-4">
+              <div className="space-y-2 flex-1">
+                <Label>Color Name</Label>
+                <Input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="e.g. Red"
+                  required
+                />
+              </div>
+              <div className="space-y-2 flex-none w-20">
+                <Label>{editColorType === "multi" ? "Color 1" : "Color"}</Label>
+                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                  <input
+                    type="color"
+                    value={editColorCode}
+                    onChange={e => setEditColorCode(e.target.value)}
+                    className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                  />
+                </div>
+              </div>
+              {editColorType === "multi" && (
+                <div className="space-y-2 flex-none w-20">
+                  <Label>Color 2</Label>
+                  <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                    <input
+                      type="color"
+                      value={editColorCode2}
+                      onChange={e => setEditColorCode2(e.target.value)}
+                      className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Type</Label>

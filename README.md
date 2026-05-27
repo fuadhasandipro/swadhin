@@ -1,6 +1,6 @@
-# Swadhin Enterprise ERP System
+# Swadhin Enterprize ERP System
 
-A modern, Bangla-first Enterprise Resource Planning (ERP) web application built for Swadhin Enterprise. This system manages orders, inventory (stock), customers, cash flow, and employee salaries.
+A modern, Bangla-first Enterprize Resource Planning (ERP) web application built for Swadhin Enterprize. This system manages orders, inventory (stock), customers, cash flow, and employee salaries.
 
 Built with **Next.js 14 (App Router)**, **Supabase**, **Tailwind CSS**, and **Shadcn UI**.
 

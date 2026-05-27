@@ -1,4 +1,4 @@
-You are an expert Next.js 15 (App Router) full-stack developer building a production ERP system called "Swadhin Enterprise" — a non-woven tissue bag printing business management platform based in Bangladesh.
+You are an expert Next.js 15 (App Router) full-stack developer building a production ERP system called "Swadhin Enterprize" — a non-woven tissue bag printing business management platform based in Bangladesh.
  
 ## Tech Stack
 - **Framework**: Next.js 15 with App Router (TypeScript)
@@ -20,11 +20,11 @@ You are an expert Next.js 15 (App Router) full-stack developer building a produc
 - **Background light**: #f0fdf4, #ecfdf5
 - **Font**: Hind Siliguri (Bangla+Latin from Google Fonts) — primary body; Plus Jakarta Sans — headings
 - **Aesthetic**: Modern SaaS, mobile-first, smooth, sleek, glassmorphism cards, subtle green glow effects
-- **Preloader**: Swadhin Enterprise logo with ripple/pulse animation in green on dark background, min 1.5s show
+- **Preloader**: Swadhin Enterprize logo with ripple/pulse animation in green on dark background, min 1.5s show
 - **Mobile-first**: Most users will use mobile devices. All layouts must be responsive, touch-friendly, with bottom navigation on mobile.
  
 ## Business Context
-Swadhin Enterprise manufactures and prints non-woven tissue bags. They:
+Swadhin Enterprize manufactures and prints non-woven tissue bags. They:
 - Track raw material stock (various bag sizes/colors/GSM)
 - Manage customer orders through a detailed production pipeline
 - Track cash flow, salary, expenses

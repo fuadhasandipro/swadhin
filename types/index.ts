@@ -41,6 +41,7 @@ export interface Customer {
   address: string;
   balance: number; // numeric (negative = owes us, positive = we owe them)
   created_at: string;
+  orders?: { count: number }[];
 }
 
 export interface Product {
@@ -50,6 +51,29 @@ export interface Product {
   gsm: number;
   cost_per_piece: number;
   qty: number;
+  cutting_type?: string;
+  category?: string; // 'raw_material' | 'ink' | 'plate' | 'packaging' | 'other'
+  supplier_id?: string | null;
+  created_at: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  balance: number; // positive = we owe them, negative = they owe us
+  notes: string | null;
+  created_at: string;
+  supplier_transactions?: { count: number }[];
+}
+
+export interface SupplierTransaction {
+  id: string;
+  supplier_id: string;
+  type: 'debit' | 'credit';
+  amount: number;
+  description: string | null;
   created_at: string;
 }
 

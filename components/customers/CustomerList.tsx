@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Customer, Profile } from "@/types";
 import { CustomerFormDialog } from "./CustomerFormDialog";
 import { Search, Plus, UserCircle, Phone, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ export function CustomerList({ customers, profile }: { customers: Customer[], pr
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +54,7 @@ export function CustomerList({ customers, profile }: { customers: Customer[], pr
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      
+
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -64,7 +65,7 @@ export function CustomerList({ customers, profile }: { customers: Customer[], pr
         <div className="flex w-full md:w-auto items-center gap-3">
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-            <Input 
+            <Input
               type="text"
               placeholder={t('searchPlaceholder')}
               defaultValue={searchParams.get('search') || ''}
@@ -72,8 +73,8 @@ export function CustomerList({ customers, profile }: { customers: Customer[], pr
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-background"
             />
           </div>
-          
-          <Button 
+
+          <Button
             onClick={() => setIsAddOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap"
           >
@@ -82,113 +83,84 @@ export function CustomerList({ customers, profile }: { customers: Customer[], pr
         </div>
       </div>
 
-      {/* Table (Desktop) */}
-      <div className="hidden md:block rounded-2xl overflow-hidden border">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">{t('columns.name')}</TableHead>
-              <TableHead className="font-semibold">{t('columns.contact')}</TableHead>
-              <TableHead className="font-semibold">{t('columns.address')}</TableHead>
-              <TableHead className="font-semibold text-right">{t('columns.balance')}</TableHead>
-              <TableHead className="font-semibold text-center">{t('columns.action')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {customers.map((customer) => (
-              <TableRow key={customer.id} className="border-b transition-colors">
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center font-bold">
-                      {customer.name.charAt(0)}
-                    </div>
-                    {customer.name}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Phone size={14} className="text-muted-foreground" /> {customer.phone}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                  <div className="flex items-center gap-1" title={customer.address}>
-                    <MapPin size={14} className="text-muted-foreground shrink-0" /> <span className="truncate">{customer.address}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <p className={cn("font-bold", getBalanceColor(customer.balance))}>
-                    ৳{Math.abs(customer.balance).toLocaleString('en-IN')}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{getBalanceStatus(customer.balance)}</p>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Link href={`/customers/${customer.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
-                    {t('viewProfile')}
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-            {customers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  {t('noCustomers')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {customers.map((customer) => {
+          const isDue = customer.balance < 0;
+          const isWeOwe = customer.balance > 0;
+          const balanceColor = isDue
+            ? "bg-red-50 border-red-100 text-red-700 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400"
+            : isWeOwe
+              ? "bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-400"
+              : "bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400";
+          const balanceLabelColor = isDue ? "text-red-600/70" : isWeOwe ? "text-blue-600/70" : "text-emerald-600/70";
+          const badgeClass = isDue
+            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-none font-semibold"
+            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-none font-semibold";
+          const initials = customer.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-      {/* Cards (Mobile) */}
-      <div className="md:hidden space-y-4">
-        {customers.map((customer) => (
-          <Card key={customer.id} className="relative overflow-hidden flex flex-col">
-            <CardContent className="p-4 flex flex-col h-full">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center font-bold shrink-0 text-lg">
-                    {customer.name.charAt(0)}
+          return (
+            <Link key={customer.id} href={`/customers/${customer.id}`} className="block transition-transform hover:-translate-y-1 duration-200">
+              <Card className="h-full flex flex-col border-slate-200 dark:border-emerald-900/50 shadow-sm hover:shadow-md transition-shadow rounded-xl">
+                <CardContent className="p-4 flex flex-col h-full gap-4">
+                  {/* Header */}
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0 text-sm tracking-widest">
+                        {initials}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-base leading-tight text-slate-800 dark:text-slate-200 line-clamp-1">
+                          {customer.name}
+                        </h3>
+                        <p className="text-[11px] text-slate-400 font-medium">Since {new Date(customer.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
+                      </div>
+                    </div>
+                    <Badge className={badgeClass} variant="secondary">
+                      {isDue ? 'Due' : 'Active'}
+                    </Badge>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight">
-                      {customer.name}
-                    </h3>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
-                      <Phone size={12} /> {customer.phone}
+
+                  {/* Contact Info */}
+                  <div className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <div className="flex items-center gap-2">
+                      <Phone size={13} className="shrink-0" />
+                      <span>{customer.phone || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={13} className="shrink-0" />
+                      <span className="truncate">{customer.address || 'N/A'}</span>
                     </div>
                   </div>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-1 text-sm text-muted-foreground mb-4 bg-muted/50 p-2 rounded-lg">
-                <MapPin size={14} className="shrink-0 mt-0.5" /> 
-                <span className="line-clamp-2">{customer.address}</span>
-              </div>
 
-              <div className="pt-3 border-t flex justify-between items-center mt-auto">
-                <div>
-                  <p className="text-xs text-muted-foreground">{getBalanceStatus(customer.balance)}</p>
-                  <p className={cn("font-bold text-lg leading-tight", getBalanceColor(customer.balance))}>
-                    ৳{Math.abs(customer.balance).toLocaleString('en-IN')}
-                  </p>
-                </div>
-                
-                <Link href={`/customers/${customer.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
-                  {t('viewProfile')}
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  {/* Footer Stats */}
+                  <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 text-center border border-emerald-100 dark:border-emerald-900/50 flex flex-col justify-center">
+                      <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-wider font-semibold mb-0.5">Total orders</p>
+                      <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{customer.orders?.[0]?.count || 0}</p>
+                    </div>
+                    <div className={`rounded-lg p-2 text-center border flex flex-col justify-center ${balanceColor}`}>
+                      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-0.5 ${balanceLabelColor}`}>
+                        {isWeOwe ? 'Payable' : 'Due amount'}
+                      </p>
+                      <p className="text-lg font-bold">
+                        ৳{Math.abs(customer.balance).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
         {customers.length === 0 && (
-          <div className="bg-card border rounded-2xl p-8 text-center text-muted-foreground">
+          <div className="col-span-full bg-card border rounded-2xl p-8 text-center text-muted-foreground">
             {t('noCustomers')}
           </div>
         )}
       </div>
 
       <CustomerFormDialog isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
-      
+
     </div>
   );
 }

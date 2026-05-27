@@ -1,61 +1,46 @@
-import { getDashboardStats, getMonthlyChartData, getLowStockItems, getTopStockItems, getRecentOrders } from '@/lib/actions/dashboard';
+import { getDashboardStats, getMonthlyChartData, getLowStockItems, getTopStockItems, getRecentOrders, getOrderStatusBreakdown } from '@/lib/actions/dashboard';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { MonthlyCashChart } from '@/components/dashboard/MonthlyCashChart';
-import { StockSummaryCard } from '@/components/dashboard/StockSummaryCard';
+import { OrderStatusWidget } from '@/components/dashboard/OrderStatusWidget';
 import { RecentOrdersWidget } from '@/components/dashboard/RecentOrdersWidget';
 import { LowStockBanner } from '@/components/dashboard/LowStockBanner';
-import { ArrowDownToLine, ArrowUpFromLine, Wallet, Users, AlertCircle, Building2 } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Wallet, Users, AlertCircle, Building2, Truck, Activity, PackageCheck } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { format } from 'date-fns';
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const t = await getTranslations('dashboard');
-  const sp = await searchParams;
-  const period = (sp.period === 'month' ? 'month' : 'today') as 'today' | 'month';
+  const period = 'month';
 
-  const [stats, chartData, lowStockItems, topStockItems, recentOrders] = await Promise.all([
+  const [stats, chartData, lowStockItems, recentOrders, orderStatusBreakdown] = await Promise.all([
     getDashboardStats(period),
     getMonthlyChartData(),
     getLowStockItems(),
-    getTopStockItems(),
-    getRecentOrders()
+    getRecentOrders(),
+    getOrderStatusBreakdown()
   ]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
       <LowStockBanner count={lowStockItems.length} />
 
-      {/* Header & Toggle */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-foreground">{t('overview')}</h2>
-          <p className="text-sm text-muted-foreground">{t('overviewDesc')}</p>
+          <h2 className="text-2xl font-heading font-bold text-foreground">Dashboard</h2>
         </div>
-
-        <div className="flex items-center bg-muted p-1 rounded-xl w-fit">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full font-medium">
+            {format(new Date(), "dd MMM yyyy")}
+          </span>
           <Link
-            href="?period=today"
-            className={cn(
-              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-              period === 'today'
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            href="/orders/create"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 shadow-sm"
           >
-            {t('today')}
-          </Link>
-          <Link
-            href="?period=month"
-            className={cn(
-              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-              period === 'month'
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t('thisMonth')}
+            + New Order
           </Link>
         </div>
       </div>
@@ -63,40 +48,51 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard
-          title={period === 'today' ? t('today') + " " + t('cashIn') : t('thisMonth') + " " + t('cashIn')}
-          value={stats.cashIn}
-          icon={<ArrowDownToLine size={20} />}
-          variant="emerald"
-        />
-        <KPICard
-          title={period === 'today' ? t('today') + " " + t('cashOut') : t('thisMonth') + " " + t('cashOut')}
-          value={stats.cashOut}
-          icon={<ArrowUpFromLine size={20} />}
-          variant="rose"
-        />
-        <KPICard
-          title={t('cashInHand')}
+          title="Cash In Hand"
           value={stats.cashInHand}
           icon={<Wallet size={20} />}
-          variant="blue"
+          variant="emerald"
+          valueColor="text-[#016335] dark:text-emerald-400"
+          prefix="৳"
         />
         <KPICard
-          title={t('dueFromCustomers')}
+          title="Monthly Inflow"
+          value={stats.cashIn}
+          icon={<ArrowDownToLine size={20} />}
+          variant="blue"
+          valueColor="text-blue-600 dark:text-blue-400"
+          prefix="৳"
+          subtitle={format(new Date(), "MMM yyyy")}
+        />
+        <KPICard
+          title="They Owe Us"
           value={stats.totalDueFromCustomers}
           icon={<Users size={20} />}
           variant="amber"
+          valueColor="text-orange-500 dark:text-orange-400"
+          prefix="৳"
         />
         <KPICard
-          title={t('oweToCustomers')}
-          value={stats.weOweCustomers}
+          title="We Owe Them"
+          value={stats.weOweThem}
           icon={<AlertCircle size={20} />}
           variant="rose"
+          valueColor="text-red-500 dark:text-red-400"
+          prefix="৳"
         />
         <KPICard
-          title={t('totalBusinessValue')}
-          value={stats.totalBusinessValue}
-          icon={<Building2 size={20} />}
+          title="Active Orders"
+          value={stats.activeOrders}
+          icon={<Activity size={20} />}
           variant="emerald"
+          valueColor="text-slate-800 dark:text-slate-200"
+        />
+        <KPICard
+          title="Deliveries Today"
+          value={stats.deliveriesToday}
+          icon={<PackageCheck size={20} />}
+          variant="blue"
+          valueColor="text-slate-800 dark:text-slate-200"
         />
       </div>
 
@@ -113,9 +109,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </CardContent>
         </Card>
 
-        {/* Stock Summary */}
+        {/* Order Status Breakdown */}
         <div className="lg:col-span-1">
-          <StockSummaryCard products={topStockItems} />
+          <OrderStatusWidget breakdown={orderStatusBreakdown} />
         </div>
       </div>
 

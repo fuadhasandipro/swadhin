@@ -13,9 +13,10 @@ interface KPICardProps {
   variant?: 'emerald' | 'amber' | 'rose' | 'blue';
   prefix?: string;
   suffix?: string;
+  valueColor?: string;
 }
 
-export function KPICard({ title, value, subtitle, icon, variant = 'emerald', prefix = '', suffix = '' }: KPICardProps) {
+export function KPICard({ title, value, subtitle, icon, variant = 'emerald', prefix = '', suffix = '', valueColor }: KPICardProps) {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function KPICard({ title, value, subtitle, icon, variant = 'emerald', pre
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold font-sans text-foreground flex items-baseline gap-1">
+          <div className={cn("text-2xl font-bold font-sans flex items-baseline gap-1", valueColor || "text-foreground")}>
             {prefix && <span className="text-lg opacity-60">{prefix}</span>}
             {Math.floor(displayValue).toLocaleString('en-IN')}
             {suffix && <span className="text-lg opacity-60">{suffix}</span>}

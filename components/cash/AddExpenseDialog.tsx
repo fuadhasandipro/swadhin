@@ -11,17 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { paySalary } from "@/lib/actions/salary";
+import { recordSupplierPayment, recordSupplierPurchase } from "@/lib/actions/suppliers";
 import { toast } from "react-hot-toast";
 
 
 
 const expenseSchema = z.object({
-  amount: z.number().min(1, "Amount must be greater than 0"),
+  amount: z.number().min(0, "Amount must be >= 0"),
+  total_amount: z.number().optional(),
   category: z.string().min(1, "Category is required"),
   description: z.string().optional(),
   date: z.string().optional(),
   employee_id: z.string().optional(),
-  salary_month: z.string().optional()
+  salary_month: z.string().optional(),
+  supplier_id: z.string().optional()
 });
 
 type FormValues = z.infer<typeof expenseSchema>;
@@ -32,6 +35,7 @@ export function AddExpenseDialog({
   cashInHand,
   expenseCategories,
   employees,
+  suppliers,
   onSuccess
 }: { 
   isOpen: boolean; 
@@ -39,6 +43,7 @@ export function AddExpenseDialog({
   cashInHand: number;
   expenseCategories: { id: string, name: string }[];
   employees: any[];
+  suppliers?: { id: string; name: string; balance: number }[];
   onSuccess?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -46,18 +51,23 @@ export function AddExpenseDialog({
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: { 
-      amount: undefined, 
+      amount: undefined,
+      total_amount: undefined,
       category: "", 
       description: "", 
       date: new Date().toISOString().split('T')[0],
       employee_id: "",
-      salary_month: new Date().toISOString().slice(0, 7) // YYYY-MM
+      salary_month: new Date().toISOString().slice(0, 7), // YYYY-MM
+      supplier_id: ""
     }
   });
 
   const category = watch("category");
   const amount = watch("amount") || 0;
   const employee_id = watch("employee_id");
+  const supplier_id = watch("supplier_id");
+
+  const selectedSupplier = suppliers?.find(s => s.id === supplier_id);
 
   useEffect(() => {
     if (category === 'salary' && employee_id) {
@@ -80,8 +90,28 @@ export function AddExpenseDialog({
         if (!data.salary_month) throw new Error("Salary month is required.");
         
         await paySalary(data.employee_id, data.salary_month, data.amount, data.description || "");
+      } else if (data.category === 'supplier_purchase') {
+        if (!data.supplier_id) throw new Error("Supplier is required.");
+        if (!data.total_amount || data.total_amount <= 0) throw new Error("Total amount must be greater than 0.");
+        await recordSupplierPurchase({
+          supplier_id: data.supplier_id,
+          amount: data.total_amount,
+          paid_amount: data.amount,
+          description: data.description || "Supplier purchase",
+          date: data.date
+        });
+      } else if (data.category.toLowerCase().includes('supplier')) {
+        if (!data.supplier_id) throw new Error("Supplier is required for supplier payments.");
+        if (data.amount <= 0) throw new Error("Payment amount must be greater than 0.");
+        await recordSupplierPayment({
+          supplier_id: data.supplier_id,
+          amount: data.amount,
+          description: data.description || "Payment to supplier",
+          date: data.date
+        });
       } else {
         if (!data.description) throw new Error("Description is required.");
+        if (data.amount <= 0) throw new Error("Expense amount must be greater than 0.");
         await addCashTransaction({
           type: 'out',
           category: 'expense',
@@ -93,7 +123,7 @@ export function AddExpenseDialog({
         });
       }
       
-      toast.success(data.category === 'salary' ? "Salary paid successfully" : "Expense recorded successfully");
+      toast.success(data.category === 'salary' ? "Salary paid successfully" : data.category.toLowerCase().includes('supplier') ? "Supplier payment recorded" : "Expense recorded successfully");
       reset();
       if (onSuccess) onSuccess();
       onClose();
@@ -132,13 +162,26 @@ export function AddExpenseDialog({
             </div>
           )}
 
+          {category === 'supplier_purchase' && (
+            <div className="space-y-2">
+              <Label>Total Bill Amount (৳)</Label>
+              <Input
+                type="number"
+                {...register("total_amount", { valueAsNumber: true })}
+                className="text-lg font-bold"
+                placeholder="e.g. 50000"
+              />
+              {errors.total_amount && <p className="text-red-500 text-xs">{errors.total_amount.message}</p>}
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Amount (৳)</Label>
+            <Label>{category === 'supplier_purchase' ? "Paid Now (৳) - Cash Out" : "Amount (৳)"}</Label>
             <Input
               type="number"
               {...register("amount", { valueAsNumber: true })}
               className="text-lg font-bold"
-              placeholder="e.g. 1500"
+              placeholder={category === 'supplier_purchase' ? "e.g. 10000 or 0" : "e.g. 1500"}
             />
             {errors.amount && <p className="text-red-500 text-xs">{errors.amount.message}</p>}
           </div>
@@ -150,8 +193,10 @@ export function AddExpenseDialog({
               {...register("category")}
             >
               <option value="">Select Category</option>
+              <option value="supplier_purchase">Supplier Purchase</option>
+              <option value="supplier_payment">Supplier Payment</option>
               <option value="salary">Salary</option>
-              {expenseCategories.filter(c => c.name.toLowerCase() !== 'salary').map(c => (
+              {expenseCategories.filter(c => c.name.toLowerCase() !== 'salary' && !c.name.toLowerCase().includes('purchase') && !c.name.toLowerCase().includes('supplier payment') && c.name !== 'supplier_payment').map(c => (
                 <option key={c.id} value={c.name}>{c.name}</option>
               ))}
             </select>
@@ -181,6 +226,28 @@ export function AddExpenseDialog({
                 />
                 {errors.salary_month && <p className="text-red-500 text-xs">{errors.salary_month.message}</p>}
               </div>
+            </div>
+          )}
+
+          {(category === 'supplier_purchase' || category.toLowerCase().includes('supplier')) && (
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                {...register("supplier_id")}
+              >
+                <option value="">Select Supplier</option>
+                {suppliers?.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {errors.supplier_id && <p className="text-red-500 text-xs">{errors.supplier_id.message}</p>}
+              
+              {selectedSupplier && (
+                <div className={`text-xs p-2 mt-1 rounded border ${selectedSupplier.balance > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                  Current Balance: {selectedSupplier.balance > 0 ? `We owe them ৳${selectedSupplier.balance.toLocaleString()}` : selectedSupplier.balance < 0 ? `They owe us ৳${Math.abs(selectedSupplier.balance).toLocaleString()}` : `Fully Settled (৳0)`}
+                </div>
+              )}
             </div>
           )}
 

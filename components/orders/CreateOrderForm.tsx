@@ -21,20 +21,29 @@ import { addPrintColorConfig } from "@/lib/actions/settings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 // Helper component for Color Chips
-const ColorChips = ({ options, value, onChange }: { options: string[], value: string, onChange: (v: string) => void }) => (
+const ColorChips = ({ options, value, onChange }: { options: {name: string, code: string, code2?: string, type?: string}[], value: string, onChange: (v: string, code: string, code2?: string) => void }) => (
   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mt-2 -mx-1 px-1">
     {options.map(c => (
       <button
-        key={c}
+        key={c.name}
         type="button"
-        onClick={() => onChange(c)}
-        className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-          value === c 
+        onClick={() => onChange(c.name, c.code, c.code2)}
+        className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border flex items-center gap-2 ${
+          value === c.name 
             ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]' 
             : 'bg-white dark:bg-emerald-950/30 text-slate-700 dark:text-emerald-100 border-slate-200 dark:border-emerald-900/50 hover:bg-slate-50'
         }`}
       >
-        {c}
+        {c.code && c.type !== 'multi' && (
+          <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: c.code }} />
+        )}
+        {c.type === 'multi' && c.code && c.code2 && (
+          <div className="flex -space-x-1">
+            <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10 relative z-10" style={{ backgroundColor: c.code }} />
+            <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10 relative z-0" style={{ backgroundColor: c.code2 }} />
+          </div>
+        )}
+        {c.name}
       </button>
     ))}
   </div>
@@ -54,11 +63,23 @@ export function CreateOrderForm({
   const [products, setProducts] = useState<Product[]>([]);
   const [printConfigs, setPrintConfigs] = useState<any[]>([]);
 
-  const BASIC_COLORS = ["লাল", "সবুজ", "নীল", "সাদা", "হলুদ", "কালো", "কমলা", "খয়েরি", "গোলাপি", "ছাই", "বেগুনী"];
+  const BASIC_COLORS = [
+    { name: "লাল", code: "#ef4444" },
+    { name: "সবুজ", code: "#22c55e" },
+    { name: "নীল", code: "#3b82f6" },
+    { name: "সাদা", code: "#ffffff" },
+    { name: "হলুদ", code: "#eab308" },
+    { name: "কালো", code: "#000000" },
+    { name: "কমলা", code: "#f97316" },
+    { name: "খয়েরি", code: "#a16207" },
+    { name: "গোলাপি", code: "#ec4899" },
+    { name: "ছাই", code: "#64748b" },
+    { name: "বেগুনী", code: "#a855f7" }
+  ];
   
-  const dbSingle = printConfigs.filter(c => !c.colors || (c.colors.length <= 1 && !c.colors.includes("handle") && !c.colors.includes("multi")) || (c.colors.length === 1 && c.colors[0] === c.name)).map(c => c.name);
-  const dbMulti = printConfigs.filter(c => c.colors && c.colors.includes("multi")).map(c => c.name);
-  const dbHandle = printConfigs.filter(c => c.colors && c.colors.includes("handle")).map(c => c.name);
+  const dbSingle = printConfigs.filter(c => !c.colors || (c.colors.length <= 1 && !c.colors.includes("handle") && !c.colors.includes("multi")) || (c.colors.length > 1 && c.colors[1] === "single") || (c.colors.length === 1 && c.colors[0] === c.name)).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", type: 'single' }));
+  const dbMulti = printConfigs.filter(c => c.colors && c.colors.includes("multi")).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", code2: c.colors?.[3] || "#2563eb", type: 'multi' }));
+  const dbHandle = printConfigs.filter(c => c.colors && (c.colors.includes("handle") || c.colors[1] === "handle")).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", type: 'handle' }));
 
   const SINGLE_COLORS = dbSingle.length > 0 ? dbSingle : BASIC_COLORS;
   const MULTI_COLORS = dbMulti.length > 0 ? dbMulti : [];
@@ -90,7 +111,7 @@ export function CreateOrderForm({
   const fetchData = async () => {
     const [custData, prodRes, colorRes] = await Promise.all([
       getCustomers(),
-      supabase.from("products").select("*").gt("qty", 0).order("bag_size"),
+      supabase.from("products").select("*").gt("qty", 0).eq("category", "raw_material").order("bag_size"),
       supabase.from("print_color_configs").select("*").eq("is_active", true).order("name")
     ]);
     if (custData) setCustomers(custData);
@@ -106,6 +127,8 @@ export function CreateOrderForm({
   const [isAddColorOpen, setIsAddColorOpen] = useState(false);
   const [newColorName, setNewColorName] = useState("");
   const [newColorType, setNewColorType] = useState<"single" | "multi" | "handle">("single");
+  const [newColorCode, setNewColorCode] = useState("#059669");
+  const [newColorCode2, setNewColorCode2] = useState("#2563eb");
   const [addingColor, setAddingColor] = useState(false);
 
   const handleAddColor = async (e: React.FormEvent) => {
@@ -116,13 +139,13 @@ export function CreateOrderForm({
     }
     setAddingColor(true);
     try {
-      let colorsToSave = [newColorName];
-      if (newColorType === "multi") colorsToSave = [newColorName, "multi"];
-      else if (newColorType === "handle") colorsToSave = [newColorName, "handle"];
+      const colorsToSave = [newColorName, newColorType, newColorCode, newColorType === "multi" ? newColorCode2 : ""];
 
       await addPrintColorConfig(newColorName, colorsToSave);
       toast.success("Color added successfully!");
       setNewColorName("");
+      setNewColorCode("#059669");
+      setNewColorCode2("#2563eb");
       setIsAddColorOpen(false);
       await fetchData(); // Refresh colors
     } catch (err: any) {
@@ -147,11 +170,17 @@ export function CreateOrderForm({
     setLoading(true);
 
     try {
+      let finalNotes = formData.notes || '';
+      if (!formData.from_stock && formData.manual_bag_size) {
+        finalNotes = finalNotes ? `${finalNotes}\nSize: ${formData.manual_bag_size}` : `Size: ${formData.manual_bag_size}`;
+      }
+
       const payload: any = {
         ...formData,
         product_id: formData.from_stock ? formData.product_id : null,
         qty: Number(formData.qty),
-        rate_per_piece: Number(formData.rate_per_piece)
+        rate_per_piece: Number(formData.rate_per_piece),
+        notes: finalNotes
       };
 
       if (isNewCustomer) {
@@ -330,7 +359,8 @@ export function CreateOrderForm({
                           product_id: v,
                           manual_bag_size: prod.bag_size,
                           body_color: prod.bag_color,
-                          gsm: prod.gsm
+                          gsm: prod.gsm,
+                          cutting_type: (prod.cutting_type as 'handle' | 'd-cut') || "handle"
                         }));
                       }
                     } else {
@@ -409,7 +439,7 @@ export function CreateOrderForm({
             <ColorChips 
               options={BASIC_COLORS} 
               value={formData.body_color} 
-              onChange={(c) => setFormData({ ...formData, body_color: c })} 
+              onChange={(c, code) => setFormData({ ...formData, body_color: c })} 
             />
           </div>
 
@@ -428,7 +458,7 @@ export function CreateOrderForm({
               <ColorChips 
                 options={HANDLE_COLORS} 
                 value={formData.handle_color} 
-                onChange={(c) => setFormData({ ...formData, handle_color: c })} 
+                onChange={(c, code) => setFormData({ ...formData, handle_color: c })} 
               />
             </div>
           )}
@@ -473,7 +503,7 @@ export function CreateOrderForm({
             <ColorChips 
               options={formData.print_color_type === 'single' ? SINGLE_COLORS : MULTI_COLORS} 
               value={formData.print_color_config?.color || ""} 
-              onChange={(c) => setFormData({ ...formData, print_color_config: { color: c } })} 
+              onChange={(c, code, code2) => setFormData({ ...formData, print_color_config: { color: c, code1: code, code2: code2, type: formData.print_color_type } })} 
             />
           </div>
         </CardContent>
@@ -542,14 +572,40 @@ export function CreateOrderForm({
             <DialogTitle>Add New Color</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddColor} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Color Name</Label>
-              <Input
-                value={newColorName}
-                onChange={(e) => setNewColorName(e.target.value)}
-                placeholder="e.g. Red"
-                required
-              />
+            <div className="flex gap-4">
+              <div className="space-y-2 flex-1">
+                <Label>Color Name</Label>
+                <Input
+                  value={newColorName}
+                  onChange={(e) => setNewColorName(e.target.value)}
+                  placeholder="e.g. Red"
+                  required
+                />
+              </div>
+              <div className="space-y-2 flex-none w-20">
+                <Label>{newColorType === "multi" ? "Color 1" : "Color"}</Label>
+                <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                  <input
+                    type="color"
+                    value={newColorCode}
+                    onChange={e => setNewColorCode(e.target.value)}
+                    className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                  />
+                </div>
+              </div>
+              {newColorType === "multi" && (
+                <div className="space-y-2 flex-none w-20">
+                  <Label>Color 2</Label>
+                  <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                    <input
+                      type="color"
+                      value={newColorCode2}
+                      onChange={e => setNewColorCode2(e.target.value)}
+                      className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Color Type</Label>
