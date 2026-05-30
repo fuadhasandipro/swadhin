@@ -7,8 +7,12 @@ import { revalidatePath } from "next/cache";
 
 export async function getCustomers(searchQuery?: string) {
   const supabase = await createClient();
-  let query = supabase.from('customers').select('*, orders(count)').order('created_at', { ascending: false });
-  
+  let query = supabase.from('customers').select(`
+    *, 
+    orders(count),
+    customer_transactions!left(created_at)
+  `).order('created_at', { ascending: false });
+
   if (searchQuery) {
     query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);
   }
@@ -189,7 +193,7 @@ export async function recordCashCollection(id: string, amount: number, descripti
 
   const supabase = await createClient();
   
-  const { data: customer } = await supabase.from('customers').select('balance').eq('id', id).single();
+  const { data: customer } = await supabase.from('customers').select('name, balance').eq('id', id).single();
   if (!customer) throw new Error("Customer not found");
 
   // Collection means customer is paying us what they owe. 
@@ -232,7 +236,7 @@ export async function recordCashCollection(id: string, amount: number, descripti
     action: 'CASH_COLLECTION',
     entityType: 'customers',
     entityId: id,
-    details: { amount, description, old_balance: customer.balance, new_balance: newBalance }
+    details: { customer_name: customer.name, amount, description, old_balance: customer.balance, new_balance: newBalance }
   });
 
   revalidatePath('/customers');

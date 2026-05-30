@@ -11,6 +11,8 @@ import { Loader2, Send, Save } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 
+import { getSMSAccountStats } from "@/lib/actions/sms";
+
 export function SMSSettingsTab() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +20,10 @@ export function SMSSettingsTab() {
   // API Token State
   const [apiToken, setApiToken] = useState("");
   const [savingToken, setSavingToken] = useState(false);
+
+  // SMS Stats
+  const [stats, setStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   // Test SMS state
   const [testPhone, setTestPhone] = useState("");
@@ -31,11 +37,24 @@ export function SMSSettingsTab() {
       setLogs(logsData);
       if (settings.sms_api_token) {
         setApiToken(settings.sms_api_token);
+        fetchStats(settings.sms_api_token);
       }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async (token: string) => {
+    try {
+      setLoadingStats(true);
+      const data = await getSMSAccountStats(token);
+      setStats(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -48,6 +67,7 @@ export function SMSSettingsTab() {
     try {
       await updateSetting('sms_api_token', apiToken);
       toast.success("SMS API Token saved!");
+      fetchStats(apiToken);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -131,6 +151,42 @@ export function SMSSettingsTab() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Stats Card */}
+        {apiToken && (
+          <Card className="border-emerald-900/10 shadow-sm md:col-span-2">
+            <CardHeader>
+              <CardTitle>Account Statistics</CardTitle>
+              <CardDescription>Real-time information from your SMS provider.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingStats ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-emerald-600" /></div>
+              ) : stats ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50 text-center">
+                    <p className="text-xs text-emerald-600 font-semibold mb-1 uppercase">Balance</p>
+                    <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{stats.balance || 0} SMS</p>
+                  </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50 text-center">
+                    <p className="text-xs text-emerald-600 font-semibold mb-1 uppercase">Rate</p>
+                    <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">৳{stats.rate || 0}</p>
+                  </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50 text-center">
+                    <p className="text-xs text-emerald-600 font-semibold mb-1 uppercase">Total Sent</p>
+                    <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{stats.totalsms || 0}</p>
+                  </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50 text-center">
+                    <p className="text-xs text-emerald-600 font-semibold mb-1 uppercase">Expiry</p>
+                    <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mt-1">{stats.expiry || 'N/A'}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">Failed to load statistics.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card className="border-emerald-900/10 shadow-sm">

@@ -9,6 +9,8 @@ import { Printer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { getColorHex } from "@/lib/utils/colors";
+import { getSettings } from "@/lib/actions/settings";
+import { PrintInvoiceButton } from "@/components/orders/PrintInvoiceButton";
 
 export default async function OrderDetailPage({
   params,
@@ -29,6 +31,7 @@ export default async function OrderDetailPage({
     .order("created_at", { ascending: false });
 
   const { data: colorConfigs } = await supabase.from('print_color_configs').select('*');
+  const settings = await getSettings();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -76,12 +79,11 @@ export default async function OrderDetailPage({
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <OrderStatusUpdate orderId={order.id} currentStatus={order.status} />
-          <Link href={`/orders/${order.id}/print`} target="_blank" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto border-slate-200 dark:border-emerald-700 text-slate-600 dark:text-emerald-300 hover:bg-slate-50 dark:hover:bg-emerald-900/50 h-11 sm:h-10">
-              <Printer className="h-4 w-4 mr-2" />
-              {t("detail.print")}
-            </Button>
-          </Link>
+          <PrintInvoiceButton 
+            order={order} 
+            settings={settings} 
+            translations={{ print: t("detail.print") }}
+          />
         </div>
       </div>
 
@@ -125,10 +127,22 @@ export default async function OrderDetailPage({
               <span className="text-slate-500 dark:text-emerald-500">Delivery Date:</span>
               <span>{format(new Date(order.delivery_date), "PP")}</span>
             </div>
-            <div className="flex justify-between pt-2">
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
               <span className="text-slate-500 dark:text-emerald-500">Total Amount:</span>
               <span className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-300">
                 ৳{Number(order.total_amount).toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100 dark:border-emerald-900/20 pb-2">
+              <span className="text-slate-500 dark:text-emerald-500">Paid (Advance):</span>
+              <span className="font-mono font-semibold text-blue-600 dark:text-blue-300">
+                ৳{Number(order.paid_amount || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div className="flex justify-between pt-2">
+              <span className="text-slate-700 dark:text-emerald-300 font-semibold">Due Amount:</span>
+              <span className={`font-mono font-bold text-lg ${(Number(order.total_amount) - Number(order.paid_amount || 0)) > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                ৳{(Number(order.total_amount) - Number(order.paid_amount || 0)).toLocaleString('en-IN')}
               </span>
             </div>
           </CardContent>
@@ -230,11 +244,11 @@ export default async function OrderDetailPage({
                   {/* Content */}
                   <div className="flex-1 md:flex-none md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-emerald-900/50 bg-slate-50 dark:bg-emerald-950/30 shadow-sm transition-all hover:shadow-md overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:space-x-2 mb-2 gap-1 sm:gap-0">
-                      <div className="font-bold text-slate-800 dark:text-emerald-300">{log.action === 'updated_order_status' ? 'Status Update' : 'Created Order'}</div>
+                      <div className="font-bold text-slate-800 dark:text-emerald-300">{log.action === 'UPDATE_STATUS' ? 'Status Update' : 'Created Order'}</div>
                       <time className="font-mono text-xs text-slate-500 dark:text-emerald-500">{format(new Date(log.created_at), "PPp")}</time>
                     </div>
                     <div className="text-slate-600 dark:text-emerald-100 text-sm mt-1">
-                      {log.action === 'updated_order_status' && (
+                      {log.action === 'UPDATE_STATUS' && (
                         <span className="flex flex-wrap items-center gap-1.5 leading-relaxed">
                           Changed from
                           <strong className="text-slate-800 dark:text-emerald-400 bg-white dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-slate-200 dark:border-emerald-800/50">{t(`status.${log.details?.from}`)}</strong>
@@ -242,7 +256,7 @@ export default async function OrderDetailPage({
                           <strong className="text-slate-800 dark:text-emerald-400 bg-white dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-slate-200 dark:border-emerald-800/50">{t(`status.${log.details?.to}`)}</strong>
                         </span>
                       )}
-                      {log.action === 'created_order' && (
+                      {log.action === 'CREATE_ORDER' && (
                         <span>Order created with total ৳{log.details?.total?.toLocaleString('en-IN')}</span>
                       )}
                     </div>

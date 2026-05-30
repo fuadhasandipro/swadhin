@@ -24,7 +24,7 @@ export function OrderStatusWidget({ breakdown }: { breakdown: OrderStatusBreakdo
   );
 
   return (
-    <Card className="h-full border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-[#0a0f0a]">
+    <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-[#0a0f0a]">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           Order status breakdown

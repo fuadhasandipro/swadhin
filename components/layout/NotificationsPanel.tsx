@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, AlertTriangle } from 'lucide-react';
+import { Bell, X, AlertTriangle, PackageSearch, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Product, Order } from '@/types';
-import { PackageSearch, CheckCircle2 } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -16,17 +14,26 @@ type NotificationItem = {
   timestamp?: string;
 };
 
-export function NotificationsPanel({
-  isOpen,
-  onClose
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  const supabase = createClient();
+// Global helper for dismissed notifications
+const getDismissedIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  const saved = localStorage.getItem('dismissed_notifications');
+  return saved ? JSON.parse(saved) : [];
+};
 
-  const { data: notifications, isLoading } = useQuery({
-    queryKey: ['system-notifications'],
+const dismissNotificationId = (id: string) => {
+  const current = getDismissedIds();
+  if (!current.includes(id)) {
+    const next = [...current, id];
+    localStorage.setItem('dismissed_notifications', JSON.stringify(next));
+    window.dispatchEvent(new Event('notifications_updated'));
+  }
+};
+
+const useNotificationsData = () => {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: ['system-notifications-full'],
     queryFn: async () => {
       const items: NotificationItem[] = [];
 
@@ -41,7 +48,7 @@ export function NotificationsPanel({
           items.push({
             id: `stock-${p.id}`,
             type: 'low_stock',
-            title: `Low Stock: ${p.bag_size}`,
+            title: `Low Stock: ${p.bag_size} ${p.bag_color ? `(${p.bag_color})` : ''}`,
             description: `Only ${p.qty} pcs remaining.`,
           });
         });
@@ -89,6 +96,28 @@ export function NotificationsPanel({
     },
     staleTime: 60000,
   });
+};
+
+export function NotificationsPanel({
+  isOpen,
+  onClose
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { data: allNotifications, isLoading } = useNotificationsData();
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setDismissedIds(getDismissedIds());
+    const handleUpdate = () => setDismissedIds(getDismissedIds());
+    window.addEventListener('notifications_updated', handleUpdate);
+    return () => window.removeEventListener('notifications_updated', handleUpdate);
+  }, []);
+
+  const notifications = allNotifications?.filter(n => !dismissedIds.includes(n.id)) || [];
+
+
 
   return (
     <AnimatePresence>
@@ -125,40 +154,47 @@ export function NotificationsPanel({
                 </div>
               ) : notifications && notifications.length > 0 ? (
                 notifications.map((notif) => (
-                  <div 
-                    key={notif.id} 
-                    className={`p-3 border rounded-xl flex items-start gap-3
-                      ${notif.type === 'low_stock' ? 'bg-red-950/20 border-red-900/50' : ''}
-                      ${notif.type === 'ready_delivery' ? 'bg-blue-950/20 border-blue-900/50' : ''}
-                      ${notif.type === 'waiting_design' ? 'bg-amber-950/20 border-amber-900/50' : ''}
-                    `}
-                  >
-                    <div className={`p-2 rounded-lg mt-0.5
-                      ${notif.type === 'low_stock' ? 'bg-red-900/30 text-red-400' : ''}
-                      ${notif.type === 'ready_delivery' ? 'bg-blue-900/30 text-blue-400' : ''}
-                      ${notif.type === 'waiting_design' ? 'bg-amber-900/30 text-amber-400' : ''}
-                    `}>
-                      {notif.type === 'low_stock' && <AlertTriangle size={18} />}
-                      {notif.type === 'ready_delivery' && <CheckCircle2 size={18} />}
-                      {notif.type === 'waiting_design' && <PackageSearch size={18} />}
-                    </div>
-                    <div>
-                      <h3 className={`font-sans font-medium 
-                        ${notif.type === 'low_stock' ? 'text-red-400' : ''}
-                        ${notif.type === 'ready_delivery' ? 'text-blue-400' : ''}
-                        ${notif.type === 'waiting_design' ? 'text-amber-400' : ''}
+                    <div 
+                      key={notif.id} 
+                      className={`p-3 border rounded-xl flex items-start gap-3 relative group
+                        ${notif.type === 'low_stock' ? 'bg-red-950/20 border-red-900/50' : ''}
+                        ${notif.type === 'ready_delivery' ? 'bg-blue-950/20 border-blue-900/50' : ''}
+                        ${notif.type === 'waiting_design' ? 'bg-amber-950/20 border-amber-900/50' : ''}
+                      `}
+                    >
+                      <button 
+                        onClick={() => dismissNotificationId(notif.id)}
+                        className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-200 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Mark as read"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className={`p-2 rounded-lg mt-0.5
+                        ${notif.type === 'low_stock' ? 'bg-red-900/30 text-red-400' : ''}
+                        ${notif.type === 'ready_delivery' ? 'bg-blue-900/30 text-blue-400' : ''}
+                        ${notif.type === 'waiting_design' ? 'bg-amber-900/30 text-amber-400' : ''}
                       `}>
-                        {notif.title}
-                      </h3>
-                      <p className={`text-sm mt-1 font-sans
-                        ${notif.type === 'low_stock' ? 'text-red-300/70' : ''}
-                        ${notif.type === 'ready_delivery' ? 'text-blue-300/70' : ''}
-                        ${notif.type === 'waiting_design' ? 'text-amber-300/70' : ''}
-                      `}>
-                        {notif.description}
-                      </p>
+                        {notif.type === 'low_stock' && <AlertTriangle size={18} />}
+                        {notif.type === 'ready_delivery' && <CheckCircle2 size={18} />}
+                        {notif.type === 'waiting_design' && <PackageSearch size={18} />}
+                      </div>
+                      <div className="pr-4">
+                        <h3 className={`font-sans font-medium 
+                          ${notif.type === 'low_stock' ? 'text-red-400' : ''}
+                          ${notif.type === 'ready_delivery' ? 'text-blue-400' : ''}
+                          ${notif.type === 'waiting_design' ? 'text-amber-400' : ''}
+                        `}>
+                          {notif.title}
+                        </h3>
+                        <p className={`text-sm mt-1 font-sans
+                          ${notif.type === 'low_stock' ? 'text-red-300/70' : ''}
+                          ${notif.type === 'ready_delivery' ? 'text-blue-300/70' : ''}
+                          ${notif.type === 'waiting_design' ? 'text-amber-300/70' : ''}
+                        `}>
+                          {notif.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
                 ))
               ) : (
                 <div className="text-center text-emerald-600 font-sans mt-20 flex flex-col items-center">
@@ -175,22 +211,17 @@ export function NotificationsPanel({
 }
 
 export function NotificationBell({ onClick }: { onClick: () => void }) {
-  const supabase = createClient();
+  const { data: allNotifications } = useNotificationsData();
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
 
-  const { data: count } = useQuery({
-    queryKey: ['system-notifications-count'],
-    queryFn: async () => {
-      let total = 0;
+  useEffect(() => {
+    setDismissedIds(getDismissedIds());
+    const handleUpdate = () => setDismissedIds(getDismissedIds());
+    window.addEventListener('notifications_updated', handleUpdate);
+    return () => window.removeEventListener('notifications_updated', handleUpdate);
+  }, []);
 
-      const { count: stockCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).lt('qty', 10);
-      const { count: readyCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'ready_delivery');
-      const { count: designCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'design_waiting_confirmation');
-
-      total += (stockCount || 0) + (readyCount || 0) + (designCount || 0);
-      return total;
-    },
-    staleTime: 60000,
-  });
+  const count = allNotifications?.filter(n => !dismissedIds.includes(n.id)).length || 0;
 
   return (
     <button onClick={onClick} className="relative p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 rounded-full transition-colors cursor-pointer">

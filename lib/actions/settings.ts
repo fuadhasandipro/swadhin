@@ -23,7 +23,6 @@ export async function updateSetting(key: string, value: any) {
     userId: adminProfile.id,
     action: 'UPDATE_SETTING',
     entityType: 'settings',
-    entityId: key,
     details: { key, value }
   });
 

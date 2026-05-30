@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { toast } from "react-hot-toast";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -49,8 +50,10 @@ export function CustomerFormDialog({
     try {
       if (customer) {
         await updateCustomer(customer.id, data);
+        toast.success(t('form.update') + " successful");
       } else {
         await createCustomer(data);
+        toast.success(t('form.submit') + " successful");
       }
       reset();
       onClose();

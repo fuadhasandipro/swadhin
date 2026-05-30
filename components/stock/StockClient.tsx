@@ -9,6 +9,7 @@ import { Search, Plus, PackagePlus, Trash2, AlertTriangle, Package, Loader2, Tag
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { getColorHex } from "@/lib/utils/colors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,11 +52,7 @@ export function StockClient({ products, profile }: { products: Product[], profil
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const totalValue = products.reduce((acc, p) => acc + (p.qty * p.cost_per_piece), 0);
-  const [activeCategory, setActiveCategory] = useState<string>("all");
-
-  const filteredProducts = activeCategory === "all"
-    ? products
-    : products.filter(p => (p.category || 'raw_material') === activeCategory);
+  const filteredProducts = products;
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const params = new URLSearchParams(searchParams);
@@ -113,24 +110,6 @@ export function StockClient({ products, profile }: { products: Product[], profil
         </div>
       </div>
 
-      {/* Category Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {["all", "raw_material", "ink", "plate", "packaging", "other"].map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all",
-              activeCategory === cat
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                : "bg-white dark:bg-emerald-950/30 text-slate-600 dark:text-emerald-300 border-slate-200 dark:border-emerald-900/50 hover:bg-slate-50"
-            )}
-          >
-            {cat === "all" ? "সব" : CATEGORY_LABELS[cat] || cat}
-          </button>
-        ))}
-      </div>
-
       {/* Summary Card */}
       <div className="bg-gradient-to-r from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-[0_0_30px_rgba(16,185,129,0.2)] relative overflow-hidden">
         <div className="relative z-10">
@@ -147,7 +126,6 @@ export function StockClient({ products, profile }: { products: Product[], profil
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold">{t('columns.size')}</TableHead>
               <TableHead className="font-semibold">Cut</TableHead>
-              <TableHead className="font-semibold">Category</TableHead>
               <TableHead className="font-semibold">{t('columns.color')}</TableHead>
               <TableHead className="font-semibold">{t('columns.gsm')}</TableHead>
               <TableHead className="font-semibold text-right">{t('columns.cost')}</TableHead>
@@ -173,11 +151,11 @@ export function StockClient({ products, profile }: { products: Product[], profil
                   </TableCell>
                   <TableCell className="text-muted-foreground capitalize">{product.cutting_type || 'handle'}</TableCell>
                   <TableCell>
-                    <Badge className={cn("text-[10px] border-none", CATEGORY_COLORS[cat])}>
-                      {CATEGORY_LABELS[cat] || cat}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10 shrink-0" style={{ backgroundColor: getColorHex(product.bag_color, []) }} />
+                      <span className="text-[13px] text-slate-700 dark:text-slate-300">{product.bag_color}</span>
+                    </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{product.bag_color}</TableCell>
                   <TableCell className="text-muted-foreground">{product.gsm}</TableCell>
                   <TableCell className="text-muted-foreground text-right">৳{product.cost_per_piece}</TableCell>
                   <TableCell className={cn(
@@ -246,11 +224,14 @@ export function StockClient({ products, profile }: { products: Product[], profil
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="font-bold text-lg flex items-center gap-2">
-                      {product.bag_size} <span className="text-sm font-normal text-muted-foreground">({product.bag_color})</span>
+                      {product.bag_size} 
+                      <span className="text-sm font-normal text-muted-foreground flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                        <div className="w-2.5 h-2.5 rounded-full shadow-sm border border-black/10 shrink-0" style={{ backgroundColor: getColorHex(product.bag_color, []) }} />
+                        {product.bag_color}
+                      </span>
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1 capitalize">Cut: {product.cutting_type || 'handle'}</p>
                     <p className="text-sm text-muted-foreground mt-1">GSM: {product.gsm} | ৳{product.cost_per_piece}/পিস</p>
-                    <Badge className={cn("text-[10px] border-none mt-1", CATEGORY_COLORS[cat])}>{CATEGORY_LABELS[cat] || cat}</Badge>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">{t('columns.qty')}</p>

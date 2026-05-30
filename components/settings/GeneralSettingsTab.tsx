@@ -15,6 +15,8 @@ export function GeneralSettingsTab() {
 
   const [settings, setSettings] = useState({
     app_name: "Swadhin Enterprize",
+    company_address: "",
+    company_phone: "",
     low_stock_threshold: "10",
     default_delivery_days: "10",
     currency_symbol: "৳"
@@ -43,6 +45,8 @@ export function GeneralSettingsTab() {
     try {
       // Save each setting sequentially
       await updateSetting('app_name', settings.app_name);
+      await updateSetting('company_address', settings.company_address);
+      await updateSetting('company_phone', settings.company_phone);
       await updateSetting('low_stock_threshold', settings.low_stock_threshold);
       await updateSetting('default_delivery_days', settings.default_delivery_days);
       await updateSetting('currency_symbol', settings.currency_symbol);
@@ -73,6 +77,24 @@ export function GeneralSettingsTab() {
               value={settings.app_name}
               onChange={e => setSettings({ ...settings, app_name: e.target.value })}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Company Address (Invoice)</Label>
+            <Input
+              value={settings.company_address || ''}
+              onChange={e => setSettings({ ...settings, company_address: e.target.value })}
+              placeholder="e.g. 123 Main St, Dhaka"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Company Phone (Invoice)</Label>
+            <Input
+              value={settings.company_phone || ''}
+              onChange={e => setSettings({ ...settings, company_phone: e.target.value })}
+              placeholder="e.g. 01712345678"
             />
           </div>
 

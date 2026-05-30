@@ -104,6 +104,7 @@ export async function createOrder(data: any) {
       rate_per_piece: data.rate_per_piece,
       qty: data.qty,
       total_amount: data.rate_per_piece * data.qty,
+      paid_amount: data.paid_amount || 0,
       notes: data.notes || ''
     })
     .select('*, customer:customers(phone)')
@@ -115,12 +116,15 @@ export async function createOrder(data: any) {
   
   // 1. Customer Balance Debit
   // If order is placed, customer owes us, so balance decreases (gets more negative).
+  const paidAmount = data.paid_amount || 0;
+  
   const { data: customerData } = await supabase.from('customers').select('balance').eq('id', customerId).single();
   if (customerData) {
-    const newBalance = customerData.balance - order.total_amount;
+    // Net balance change: (balance - total) + paid
+    const newBalance = customerData.balance - order.total_amount + paidAmount;
     await supabase.from('customers').update({ balance: newBalance }).eq('id', customerId);
     
-    // Add transaction ledger entry
+    // Add transaction ledger entry for the order
     await supabase.from('customer_transactions').insert({
       customer_id: customerId,
       type: 'debit',
@@ -128,6 +132,28 @@ export async function createOrder(data: any) {
       description: `Order Placed (#${order.id.slice(0, 8)})`,
       order_id: order.id
     });
+
+    // If there is an advance payment, record cash collection operations
+    if (paidAmount > 0) {
+      // Customer Transaction for the payment (Credit)
+      await supabase.from('customer_transactions').insert({
+        customer_id: customerId,
+        type: 'credit',
+        amount: paidAmount,
+        description: `Advance Payment (#${order.id.slice(0, 8)})`,
+        order_id: order.id
+      });
+
+      // Global Cash Transaction (In)
+      await supabase.from('cash_transactions').insert({
+        type: 'in',
+        category: 'collection',
+        amount: paidAmount,
+        description: `Advance Payment for Order #${order.id.slice(0, 8)}`,
+        customer_id: customerId,
+        created_by: profile?.id
+      });
+    }
   }
 
   // 2. Stock Reduction
@@ -184,13 +210,8 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
   const oldStatus = order.status;
   
   // Validation Rules
-  if (newStatus !== 'canceled') {
-    const oldIdx = ORDER_STATUS_FLOW.indexOf(oldStatus);
-    const newIdx = ORDER_STATUS_FLOW.indexOf(newStatus);
-    if (newIdx <= oldIdx) {
-      throw new Error("Status can only move forward");
-    }
-  }
+  // Removed forward-only restriction to allow reverse status updates
+
 
   const role = profile.role;
   let privileges: any = {};
@@ -359,7 +380,7 @@ export async function getDeliverySchedule() {
   
   const { data, error } = await supabase
     .from('orders')
-    .select('*, customer:customers(name, phone, address), product:products(bag_size, bag_color, gsm)')
+    .select('*, customer:customers(name, phone, address, balance), product:products(bag_size, bag_color, gsm)')
     .not('status', 'in', '("delivered","canceled")')
     .or(`delivery_date.lte.${today},status.in.("ready_delivery","on_the_way")`)
     .order('delivery_date', { ascending: true });

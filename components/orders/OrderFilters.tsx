@@ -10,10 +10,10 @@ export function OrderFilters({
   currentSort,
   currentBodyColor,
   currentHandleColor,
-  currentPrintColor,
+  currentSize,
   uniqueBodyColors,
   uniqueHandleColors,
-  uniquePrintColors
+  uniqueSizes,
 }: { 
   currentTab: string, 
   currentSearch: string, 
@@ -21,10 +21,10 @@ export function OrderFilters({
   currentSort: string,
   currentBodyColor: string,
   currentHandleColor: string,
-  currentPrintColor: string,
+  currentSize: string,
   uniqueBodyColors: string[],
   uniqueHandleColors: string[],
-  uniquePrintColors: string[]
+  uniqueSizes: string[],
 }) {
   const router = useRouter();
 
@@ -33,17 +33,17 @@ export function OrderFilters({
     const sort = e.target.name === 'sort' ? e.target.value : currentSort;
     const bodyColor = e.target.name === 'bodyColor' ? e.target.value : currentBodyColor;
     const handleColor = e.target.name === 'handleColor' ? e.target.value : currentHandleColor;
-    const printColor = e.target.name === 'printColor' ? e.target.value : currentPrintColor;
+    const size = e.target.name === 'size' ? e.target.value : currentSize;
     const tab = e.target.name === 'tab' ? e.target.value : currentTab;
     
     const params = new URLSearchParams();
     if (tab && tab !== "all") params.set("tab", tab);
     if (currentSearch) params.set("search", currentSearch);
+    if (size && size !== "all") params.set("size", size);
     if (cut && cut !== "all") params.set("cut", cut);
     if (sort && sort !== "date_desc") params.set("sort", sort);
     if (bodyColor && bodyColor !== "all") params.set("bodyColor", bodyColor);
     if (handleColor && handleColor !== "all") params.set("handleColor", handleColor);
-    if (printColor && printColor !== "all") params.set("printColor", printColor);
     
     router.push(`?${params.toString()}`);
   };
@@ -91,6 +91,18 @@ export function OrderFilters({
         <option value="d-cut">D-Cut</option>
       </select>
       
+      {uniqueSizes.length > 0 && (
+        <select 
+          name="size" 
+          value={currentSize || "all"}
+          onChange={handleFilterChange}
+          className="h-8 rounded-lg border-slate-200 text-xs px-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:ring-emerald-500"
+        >
+          <option value="all">All Sizes</option>
+          {uniqueSizes.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      )}
+      
       {uniqueBodyColors.length > 0 && (
         <select 
           name="bodyColor" 
@@ -112,18 +124,6 @@ export function OrderFilters({
         >
           <option value="all">All Handle Colors</option>
           {uniqueHandleColors.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      )}
-
-      {uniquePrintColors.length > 0 && (
-        <select 
-          name="printColor" 
-          value={currentPrintColor || "all"}
-          onChange={handleFilterChange}
-          className="h-8 rounded-lg border-slate-200 text-xs px-2 bg-white dark:bg-slate-950 dark:border-slate-800 focus:ring-emerald-500 max-w-[120px] truncate"
-        >
-          <option value="all">All Print Colors</option>
-          {uniquePrintColors.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       )}
       

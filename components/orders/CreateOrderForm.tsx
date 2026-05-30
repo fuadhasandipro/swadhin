@@ -21,18 +21,17 @@ import { addPrintColorConfig } from "@/lib/actions/settings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 // Helper component for Color Chips
-const ColorChips = ({ options, value, onChange }: { options: {name: string, code: string, code2?: string, type?: string}[], value: string, onChange: (v: string, code: string, code2?: string) => void }) => (
+const ColorChips = ({ options, value, onChange }: { options: { name: string, code: string, code2?: string, type?: string }[], value: string, onChange: (v: string, code: string, code2?: string) => void }) => (
   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mt-2 -mx-1 px-1">
     {options.map(c => (
       <button
         key={c.name}
         type="button"
         onClick={() => onChange(c.name, c.code, c.code2)}
-        className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border flex items-center gap-2 ${
-          value === c.name 
-            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]' 
+        className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border flex items-center gap-2 ${value === c.name
+            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]'
             : 'bg-white dark:bg-emerald-950/30 text-slate-700 dark:text-emerald-100 border-slate-200 dark:border-emerald-900/50 hover:bg-slate-50'
-        }`}
+          }`}
       >
         {c.code && c.type !== 'multi' && (
           <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: c.code }} />
@@ -49,10 +48,48 @@ const ColorChips = ({ options, value, onChange }: { options: {name: string, code
   </div>
 );
 
-export function CreateOrderForm({ 
-  preselectedCustomerId 
-}: { 
-  preselectedCustomerId?: string 
+const PrintColorChips = ({ options, selected, onChange }: { options: { name: string, code: string }[], selected: { name: string, code: string }[], onChange: (selected: { name: string, code: string }[]) => void }) => {
+  const toggle = (c: { name: string, code: string }) => {
+    const isSelected = selected.find(s => s.name === c.name);
+    if (isSelected) {
+      onChange(selected.filter(s => s.name !== c.name));
+    } else {
+      if (selected.length < 2) {
+        onChange([...selected, c]);
+      } else {
+        onChange([selected[1], c]);
+      }
+    }
+  };
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mt-2 -mx-1 px-1">
+      {options.map(c => {
+        const isSelected = selected.find(s => s.name === c.name);
+        return (
+          <button
+            key={c.name}
+            type="button"
+            onClick={() => toggle(c)}
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border flex items-center gap-2 ${isSelected
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]'
+                : 'bg-white dark:bg-emerald-950/30 text-slate-700 dark:text-emerald-100 border-slate-200 dark:border-emerald-900/50 hover:bg-slate-50'
+              }`}
+          >
+            {c.code && (
+              <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: c.code }} />
+            )}
+            {c.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+export function CreateOrderForm({
+  preselectedCustomerId
+}: {
+  preselectedCustomerId?: string
 }) {
   const t = useTranslations("orders");
   const router = useRouter();
@@ -63,30 +100,24 @@ export function CreateOrderForm({
   const [products, setProducts] = useState<Product[]>([]);
   const [printConfigs, setPrintConfigs] = useState<any[]>([]);
 
-  const BASIC_COLORS = [
-    { name: "লাল", code: "#ef4444" },
-    { name: "সবুজ", code: "#22c55e" },
-    { name: "নীল", code: "#3b82f6" },
-    { name: "সাদা", code: "#ffffff" },
-    { name: "হলুদ", code: "#eab308" },
-    { name: "কালো", code: "#000000" },
-    { name: "কমলা", code: "#f97316" },
-    { name: "খয়েরি", code: "#a16207" },
-    { name: "গোলাপি", code: "#ec4899" },
-    { name: "ছাই", code: "#64748b" },
-    { name: "বেগুনী", code: "#a855f7" }
+  const STATIC_BODY_COLORS = [
+    { name: "White", code: "#ffffff" },
+    { name: "Red", code: "#ff0000" },
+    { name: "Paste", code: "#e0ffff" },
+    { name: "Yellow", code: "#ffff00" },
+    { name: "Golden", code: "#ffd700" },
+    { name: "Blue", code: "#0000ff" },
+    { name: "Black", code: "#000000" }
   ];
-  
-  const dbSingle = printConfigs.filter(c => !c.colors || (c.colors.length <= 1 && !c.colors.includes("handle") && !c.colors.includes("multi")) || (c.colors.length > 1 && c.colors[1] === "single") || (c.colors.length === 1 && c.colors[0] === c.name)).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", type: 'single' }));
-  const dbMulti = printConfigs.filter(c => c.colors && c.colors.includes("multi")).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", code2: c.colors?.[3] || "#2563eb", type: 'multi' }));
-  const dbHandle = printConfigs.filter(c => c.colors && (c.colors.includes("handle") || c.colors[1] === "handle")).map(c => ({ name: c.name, code: c.colors?.[2] || "#059669", type: 'handle' }));
 
-  const SINGLE_COLORS = dbSingle.length > 0 ? dbSingle : BASIC_COLORS;
-  const MULTI_COLORS = dbMulti.length > 0 ? dbMulti : [];
-  const HANDLE_COLORS = dbHandle.length > 0 ? dbHandle : BASIC_COLORS;
+  const dbSingle = printConfigs.filter(c => c.colors && c.colors[1] === "single").map(c => ({ name: c.name, code: c.colors?.[2] || "#059669" }));
+  const dbHandle = printConfigs.filter(c => c.colors && c.colors[1] === "handle").map(c => ({ name: c.name, code: c.colors?.[2] || "#059669" }));
+
+  const SINGLE_COLORS = dbSingle;
+  const HANDLE_COLORS = dbHandle;
 
   const [isNewCustomer, setIsNewCustomer] = useState(!preselectedCustomerId);
-  
+
   // Form State
   const [formData, setFormData] = useState({
     customer_id: preselectedCustomerId || "",
@@ -100,11 +131,13 @@ export function CreateOrderForm({
     handle_color: "",
     print_color_type: "single" as "single" | "double",
     print_color_config: null as any,
+    selected_print_colors: [] as { name: string, code: string }[],
     from_stock: false,
     product_id: "",
     manual_bag_size: "",
     qty: 0,
     rate_per_piece: 0,
+    paid_amount: 0,
     notes: ""
   });
 
@@ -126,9 +159,8 @@ export function CreateOrderForm({
   // Add Color Dialog State
   const [isAddColorOpen, setIsAddColorOpen] = useState(false);
   const [newColorName, setNewColorName] = useState("");
-  const [newColorType, setNewColorType] = useState<"single" | "multi" | "handle">("single");
+  const [newColorType, setNewColorType] = useState<"single" | "handle">("single");
   const [newColorCode, setNewColorCode] = useState("#059669");
-  const [newColorCode2, setNewColorCode2] = useState("#2563eb");
   const [addingColor, setAddingColor] = useState(false);
 
   const handleAddColor = async (e: React.FormEvent) => {
@@ -139,13 +171,12 @@ export function CreateOrderForm({
     }
     setAddingColor(true);
     try {
-      const colorsToSave = [newColorName, newColorType, newColorCode, newColorType === "multi" ? newColorCode2 : ""];
+      const colorsToSave = [newColorName, newColorType, newColorCode, ""];
 
       await addPrintColorConfig(newColorName, colorsToSave);
       toast.success("Color added successfully!");
       setNewColorName("");
       setNewColorCode("#059669");
-      setNewColorCode2("#2563eb");
       setIsAddColorOpen(false);
       await fetchData(); // Refresh colors
     } catch (err: any) {
@@ -175,11 +206,33 @@ export function CreateOrderForm({
         finalNotes = finalNotes ? `${finalNotes}\nSize: ${formData.manual_bag_size}` : `Size: ${formData.manual_bag_size}`;
       }
 
+      // Compute print color config before sending
+      let computedPrintColorConfig = formData.print_color_config;
+      if (formData.selected_print_colors.length > 0) {
+        if (formData.selected_print_colors.length === 1) {
+          computedPrintColorConfig = {
+            color: formData.selected_print_colors[0].name,
+            code1: formData.selected_print_colors[0].code,
+            type: "single"
+          };
+        } else if (formData.selected_print_colors.length === 2) {
+          computedPrintColorConfig = {
+            color: `${formData.selected_print_colors[0].name}-${formData.selected_print_colors[1].name}`,
+            code1: formData.selected_print_colors[0].code,
+            code2: formData.selected_print_colors[1].code,
+            type: "double"
+          };
+        }
+      }
+
       const payload: any = {
         ...formData,
+        print_color_type: formData.selected_print_colors.length > 1 ? 'double' : 'single',
+        print_color_config: computedPrintColorConfig,
         product_id: formData.from_stock ? formData.product_id : null,
         qty: Number(formData.qty),
         rate_per_piece: Number(formData.rate_per_piece),
+        paid_amount: Number(formData.paid_amount),
         notes: finalNotes
       };
 
@@ -200,175 +253,46 @@ export function CreateOrderForm({
   };
 
   const totalAmount = (Number(formData.qty) || 0) * (Number(formData.rate_per_piece) || 0);
+  const dueAmount = totalAmount - (Number(formData.paid_amount) || 0);
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto pb-20">
-      
-      {/* Customer Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("form.customerSection")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!preselectedCustomerId && (
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="is_new_customer" 
-                checked={isNewCustomer} 
-                onCheckedChange={(c: boolean) => setIsNewCustomer(!!c)} 
-              />
-              <Label htmlFor="is_new_customer" className="font-semibold text-emerald-600 dark:text-emerald-400">{t("form.newCustomer")}</Label>
-            </div>
-          )}
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto pb-20">
 
-          {!isNewCustomer ? (
-            <div className="space-y-3">
-              <Label>{t("form.selectCustomer")}</Label>
-              <ReactSelect 
-                options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.phone})` }))}
-                value={formData.customer_id ? { value: formData.customer_id, label: customers.find(c => c.id === formData.customer_id)?.name + ' (' + customers.find(c => c.id === formData.customer_id)?.phone + ')' } : null}
-                onChange={(option: any) => {
-                  const v = option?.value;
-                  if (v) {
-                    const cust = customers.find(c => c.id === v);
-                    setFormData({ ...formData, customer_id: v, location: cust?.address || formData.location });
-                  } else {
-                    setFormData({ ...formData, customer_id: "" });
-                  }
-                }}
-                isClearable
-                placeholder={t("form.selectCustomer")}
-                className="text-sm react-select-container"
-                classNamePrefix="react-select"
-                menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                menuPosition="fixed"
-                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <Label>Name</Label>
-                <Input 
-                  required={isNewCustomer}
-                  value={formData.new_customer.name}
-                  onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, name: e.target.value }})}
-                  className="h-11"
+        {/* Customer Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("form.customerSection")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!preselectedCustomerId && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_new_customer"
+                  checked={isNewCustomer}
+                  onCheckedChange={(c: boolean) => setIsNewCustomer(!!c)}
                 />
+                <Label htmlFor="is_new_customer" className="font-semibold text-emerald-600 dark:text-emerald-400">{t("form.newCustomer")}</Label>
               </div>
+            )}
+
+            {!isNewCustomer ? (
               <div className="space-y-3">
-                <Label>Phone</Label>
-                <Input 
-                  required={isNewCustomer}
-                  value={formData.new_customer.phone}
-                  onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, phone: e.target.value }})}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-3 md:col-span-2">
-                <Label>Address</Label>
-                <Input 
-                  value={formData.new_customer.address}
-                  className="h-11"
-                  onChange={(e: any) => {
-                    setFormData({ 
-                      ...formData, 
-                      new_customer: { ...formData.new_customer, address: e.target.value },
-                      location: e.target.value // auto update delivery location
-                    })
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Order Details Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("form.orderDetails")}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="space-y-3">
-            <Label>{t("form.orderDate")}</Label>
-            <Input 
-              type="date"
-              required
-              value={formData.order_date}
-              onChange={(e: any) => setFormData({ ...formData, order_date: e.target.value })}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-3">
-            <Label>{t("form.deliveryDate")}</Label>
-            <Input 
-              type="date"
-              required
-              min={formData.order_date}
-              value={formData.delivery_date}
-              onChange={(e: any) => setFormData({ ...formData, delivery_date: e.target.value })}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-3 md:col-span-2">
-            <Label>{t("form.location")}</Label>
-            <Input 
-              value={formData.location}
-              onChange={(e: any) => setFormData({ ...formData, location: e.target.value })}
-              className="h-11"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bag Specification Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("form.bagSpec")}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="space-y-3 md:col-span-2 pb-4 border-b">
-            <div className="flex items-center space-x-2 mb-3">
-              <Checkbox 
-                id="from_stock" 
-                checked={formData.from_stock} 
-                onCheckedChange={(c: boolean) => setFormData({...formData, from_stock: !!c})} 
-              />
-              <Label htmlFor="from_stock" className="font-semibold text-emerald-600 dark:text-emerald-400">
-                {t("form.fromStock")}
-              </Label>
-            </div>
-
-            {formData.from_stock ? (
-              <div className="space-y-3">
-                <ReactSelect 
-                  options={products.map(p => ({ value: p.id, label: `${p.bag_size} - ${p.bag_color} (${p.gsm} GSM) - ${p.qty} available` }))}
-                  value={formData.product_id ? (() => {
-                    const p = products.find(prod => prod.id === formData.product_id);
-                    return p ? { value: p.id, label: `${p.bag_size} - ${p.bag_color} (${p.gsm} GSM) - ${p.qty} available` } : null;
-                  })() : null}
+                <Label>{t("form.selectCustomer")}</Label>
+                <ReactSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.phone})` }))}
+                  value={formData.customer_id ? { value: formData.customer_id, label: customers.find(c => c.id === formData.customer_id)?.name + ' (' + customers.find(c => c.id === formData.customer_id)?.phone + ')' } : null}
                   onChange={(option: any) => {
                     const v = option?.value;
                     if (v) {
-                      const prod = products.find(p => p.id === v);
-                      if (prod) {
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          product_id: v,
-                          manual_bag_size: prod.bag_size,
-                          body_color: prod.bag_color,
-                          gsm: prod.gsm,
-                          cutting_type: (prod.cutting_type as 'handle' | 'd-cut') || "handle"
-                        }));
-                      }
+                      const cust = customers.find(c => c.id === v);
+                      setFormData({ ...formData, customer_id: v, location: cust?.address || formData.location });
                     } else {
-                      setFormData(prev => ({ ...prev, product_id: "" }));
+                      setFormData({ ...formData, customer_id: "" });
                     }
                   }}
                   isClearable
-                  placeholder="Search and Select Stock Product"
+                  placeholder={t("form.selectCustomer")}
                   className="text-sm react-select-container"
                   classNamePrefix="react-select"
                   menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
@@ -377,193 +301,328 @@ export function CreateOrderForm({
                 />
               </div>
             ) : (
-              <div className="space-y-3">
-                <Label>Manual Bag Size (e.g. 13x15)</Label>
-                <Input 
-                  placeholder="e.g. 13x15"
-                  required={!formData.from_stock}
-                  value={formData.manual_bag_size}
-                  onChange={(e: any) => setFormData({ ...formData, manual_bag_size: e.target.value })}
-                  className="h-11"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Label>Name</Label>
+                  <Input
+                    required={isNewCustomer}
+                    value={formData.new_customer.name}
+                    onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, name: e.target.value } })}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label>Phone</Label>
+                  <Input
+                    required={isNewCustomer}
+                    value={formData.new_customer.phone}
+                    onChange={(e: any) => setFormData({ ...formData, new_customer: { ...formData.new_customer, phone: e.target.value } })}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-3 md:col-span-2">
+                  <Label>Address</Label>
+                  <Input
+                    value={formData.new_customer.address}
+                    className="h-11"
+                    onChange={(e: any) => {
+                      setFormData({
+                        ...formData,
+                        new_customer: { ...formData.new_customer, address: e.target.value },
+                        location: e.target.value // auto update delivery location
+                      })
+                    }}
+                  />
+                </div>
               </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-3">
-            <Label>{t("form.cuttingType")}</Label>
-            <select 
-              value={formData.cutting_type} 
-              onChange={(e: any) => setFormData({ ...formData, cutting_type: e.target.value })}
-              className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
-            >
-              <option value="handle">Handle Cut</option>
-              <option value="d-cut">D-Cut</option>
-            </select>
-          </div>
-          
-          <div className="space-y-3">
-            <Label>{t("form.gsm")}</Label>
-            <Input 
-              type="number"
-              required
-              value={formData.gsm || ''}
-              onChange={(e: any) => setFormData({ ...formData, gsm: Number(e.target.value) })}
-              className="h-11"
-            />
-            <div className="flex gap-2 mt-1">
-              {[70, 80, 90, 100].map(val => (
-                <button 
-                  type="button" 
-                  key={val}
-                  onClick={() => setFormData({ ...formData, gsm: val })}
-                  className={`text-xs px-2 py-1 rounded border transition-colors ${formData.gsm === val ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
-                >
-                  {val}
-                </button>
-              ))}
+        {/* Order Details Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("form.orderDetails")}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-3">
+              <Label>{t("form.orderDate")}</Label>
+              <Input
+                type="date"
+                required
+                value={formData.order_date}
+                onChange={(e: any) => setFormData({ ...formData, order_date: e.target.value })}
+                className="h-11"
+              />
             </div>
-          </div>
-
-          <div className="space-y-3 md:col-span-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-emerald-900 dark:text-emerald-100">{t("form.bodyColor")}</Label>
+            <div className="space-y-3">
+              <Label>{t("form.deliveryDate")}</Label>
+              <Input
+                type="date"
+                required
+                min={formData.order_date}
+                value={formData.delivery_date}
+                onChange={(e: any) => setFormData({ ...formData, delivery_date: e.target.value })}
+                className="h-11"
+              />
             </div>
-            <Input 
-              required
-              value={formData.body_color}
-              onChange={(e: any) => setFormData({ ...formData, body_color: e.target.value })}
-              className="h-11 border-slate-200 dark:border-emerald-800/50 focus:ring-emerald-500/20"
-              placeholder="Select below or type custom color"
-            />
-            <ColorChips 
-              options={BASIC_COLORS} 
-              value={formData.body_color} 
-              onChange={(c, code) => setFormData({ ...formData, body_color: c })} 
-            />
-          </div>
+            <div className="space-y-3 md:col-span-2">
+              <Label>{t("form.location")}</Label>
+              <Input
+                value={formData.location}
+                onChange={(e: any) => setFormData({ ...formData, location: e.target.value })}
+                className="h-11"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          {formData.cutting_type === 'handle' && (
+        {/* Bag Specification Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("form.bagSpec")}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-3 md:col-span-2 pb-4 border-b">
+              <div className="flex items-center space-x-2 mb-3">
+                <Checkbox
+                  id="from_stock"
+                  checked={formData.from_stock}
+                  onCheckedChange={(c: boolean) => setFormData({ ...formData, from_stock: !!c })}
+                />
+                <Label htmlFor="from_stock" className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  {t("form.fromStock")}
+                </Label>
+              </div>
+
+              {formData.from_stock ? (
+                <div className="space-y-3">
+                  <ReactSelect
+                    options={products.map(p => ({ value: p.id, label: `${p.bag_size} - ${p.bag_color} (${p.gsm} GSM) - ${p.qty} available` }))}
+                    value={formData.product_id ? (() => {
+                      const p = products.find(prod => prod.id === formData.product_id);
+                      return p ? { value: p.id, label: `${p.bag_size} - ${p.bag_color} (${p.gsm} GSM) - ${p.qty} available` } : null;
+                    })() : null}
+                    onChange={(option: any) => {
+                      const v = option?.value;
+                      if (v) {
+                        const prod = products.find(p => p.id === v);
+                        if (prod) {
+                          setFormData(prev => ({
+                            ...prev,
+                            product_id: v,
+                            manual_bag_size: prod.bag_size,
+                            body_color: prod.bag_color,
+                            gsm: prod.gsm,
+                            cutting_type: (prod.cutting_type as 'handle' | 'd-cut') || "handle"
+                          }));
+                        }
+                      } else {
+                        setFormData(prev => ({ ...prev, product_id: "" }));
+                      }
+                    }}
+                    isClearable
+                    placeholder="Search and Select Stock Product"
+                    className="text-sm react-select-container"
+                    classNamePrefix="react-select"
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    menuPosition="fixed"
+                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Label>Manual Bag Size (e.g. 13x15)</Label>
+                  <Input
+                    placeholder="e.g. 13x15"
+                    required={!formData.from_stock}
+                    value={formData.manual_bag_size}
+                    onChange={(e: any) => setFormData({ ...formData, manual_bag_size: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Label>{t("form.cuttingType")}</Label>
+              <select
+                value={formData.cutting_type}
+                onChange={(e: any) => setFormData({ ...formData, cutting_type: e.target.value })}
+                className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
+              >
+                <option value="handle">Handle Cut</option>
+                <option value="d-cut">D-Cut</option>
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <Label>{t("form.gsm")}</Label>
+              <Input
+                type="number"
+                required
+                value={formData.gsm || ''}
+                onChange={(e: any) => setFormData({ ...formData, gsm: Number(e.target.value) })}
+                className="h-11"
+              />
+              <div className="flex gap-2 mt-1">
+                {[45, 50, 60, 70, 80, 90].map(val => (
+                  <button
+                    type="button"
+                    key={val}
+                    onClick={() => setFormData({ ...formData, gsm: val })}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${formData.gsm === val ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3 md:col-span-2">
               <div className="flex justify-between items-center">
-                <Label className="text-emerald-900 dark:text-emerald-100">{t("form.handleColor")}</Label>
+                <Label className="text-emerald-900 dark:text-emerald-100">{t("form.bodyColor")}</Label>
               </div>
-              <Input 
+              <Input
                 required
-                value={formData.handle_color}
-                onChange={(e: any) => setFormData({ ...formData, handle_color: e.target.value })}
+                value={formData.body_color}
+                onChange={(e: any) => setFormData({ ...formData, body_color: e.target.value })}
                 className="h-11 border-slate-200 dark:border-emerald-800/50 focus:ring-emerald-500/20"
                 placeholder="Select below or type custom color"
               />
-              <ColorChips 
-                options={HANDLE_COLORS} 
-                value={formData.handle_color} 
-                onChange={(c, code) => setFormData({ ...formData, handle_color: c })} 
+              <ColorChips
+                options={STATIC_BODY_COLORS}
+                value={formData.body_color}
+                onChange={(c, code) => setFormData({ ...formData, body_color: c })}
               />
             </div>
-          )}
 
-          <div className="space-y-3 md:col-span-2">
-            <Label className="text-emerald-900 dark:text-emerald-100">{t("form.printColorType")}</Label>
-            <select 
-              value={formData.print_color_type} 
-              onChange={(e: any) => setFormData({ ...formData, print_color_type: e.target.value, print_color_config: null })}
-              className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
-            >
-              <option value="single">এক কালার (Single Color)</option>
-              <option value="double">মাল্টি কালার (Multi Color)</option>
-            </select>
-          </div>
+            {formData.cutting_type === 'handle' && (
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-emerald-900 dark:text-emerald-100">{t("form.handleColor")}</Label>
+                </div>
+                <Input
+                  required
+                  value={formData.handle_color}
+                  onChange={(e: any) => setFormData({ ...formData, handle_color: e.target.value })}
+                  className="h-11 border-slate-200 dark:border-emerald-800/50 focus:ring-emerald-500/20"
+                  placeholder="Select below or type custom color"
+                />
+                <ColorChips
+                  options={HANDLE_COLORS}
+                  value={formData.handle_color}
+                  onChange={(c, code) => setFormData({ ...formData, handle_color: c })}
+                />
+              </div>
+            )}
 
-          <div className="space-y-3 md:col-span-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
-                <Palette size={16} className="text-emerald-600" />
-                Print Color (প্রিন্ট কালার)
-              </Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                className="h-7 text-xs border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={(e) => { e.preventDefault(); setIsAddColorOpen(true); }}
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                Add Color
-              </Button>
+            <div className="space-y-3 md:col-span-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                  <Palette size={16} className="text-emerald-600" />
+                  Print Color (প্রিন্ট কালার) - Select up to 2 colors
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => { e.preventDefault(); setIsAddColorOpen(true); }}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Color
+                </Button>
+              </div>
+              <Input
+                required
+                readOnly
+                value={formData.selected_print_colors.map(c => c.name).join('-')}
+                className="h-11 border-slate-200 dark:border-emerald-800/50 focus:ring-emerald-500/20 bg-slate-50 dark:bg-slate-900/50"
+                placeholder="Select colors below"
+              />
+              <PrintColorChips
+                options={SINGLE_COLORS}
+                selected={formData.selected_print_colors}
+                onChange={(selected) => setFormData({ ...formData, selected_print_colors: selected })}
+              />
             </div>
-            <Input 
-              required
-              value={formData.print_color_config?.color || ""}
-              onChange={(e: any) => setFormData({ ...formData, print_color_config: { color: e.target.value } })}
-              className="h-11 border-slate-200 dark:border-emerald-800/50 focus:ring-emerald-500/20"
-              placeholder={formData.print_color_type === 'single' ? "e.g. লাল" : "e.g. লাল-নীল"}
-            />
-            <ColorChips 
-              options={formData.print_color_type === 'single' ? SINGLE_COLORS : MULTI_COLORS} 
-              value={formData.print_color_config?.color || ""} 
-              onChange={(c, code, code2) => setFormData({ ...formData, print_color_config: { color: c, code1: code, code2: code2, type: formData.print_color_type } })} 
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Pricing Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("form.pricing")}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="space-y-3">
-            <Label>{t("form.qty")}</Label>
-            <Input 
-              type="number"
-              min="1"
-              required
-              className="h-12 text-lg font-bold"
-              value={formData.qty || ''}
-              onChange={(e: any) => setFormData({ ...formData, qty: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-3">
-            <Label>{t("form.ratePerPiece")}</Label>
-            <Input 
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              className="h-12 text-lg font-bold"
-              value={formData.rate_per_piece || ''}
-              onChange={(e: any) => setFormData({ ...formData, rate_per_piece: Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-3">
-            <Label>{t("form.total")}</Label>
-            <div className="h-12 flex items-center px-3 bg-muted border rounded-md text-foreground text-xl font-bold font-mono">
-              ৳{totalAmount.toFixed(2)}
+        {/* Pricing Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("form.pricing")}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="space-y-3">
+              <Label>{t("form.qty")}</Label>
+              <Input
+                type="number"
+                min="1"
+                required
+                className="h-12 text-lg font-bold"
+                value={formData.qty || ''}
+                onChange={(e: any) => setFormData({ ...formData, qty: Number(e.target.value) })}
+              />
             </div>
-          </div>
-          <div className="space-y-2 md:col-span-3">
-            <Label>{t("form.notes")}</Label>
-            <Textarea 
-              value={formData.notes}
-              onChange={(e: any) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="space-y-3">
+              <Label>{t("form.ratePerPiece")}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                className="h-12 text-lg font-bold"
+                value={formData.rate_per_piece || ''}
+                onChange={(e: any) => setFormData({ ...formData, rate_per_piece: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-3">
+              <Label>{t("form.total")}</Label>
+              <div className="h-12 flex items-center px-3 bg-muted border rounded-md text-foreground text-xl font-bold font-mono">
+                ৳{totalAmount.toFixed(2)}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Label>Paid Amount (Advance)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="h-12 text-lg font-bold"
+                value={formData.paid_amount || ''}
+                onChange={(e: any) => setFormData({ ...formData, paid_amount: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-3 md:col-span-2">
+              <Label>Due Amount</Label>
+              <div className={`h-12 flex items-center px-3 border rounded-md text-xl font-bold font-mono ${dueAmount > 0 ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border-red-200 dark:border-red-900/50' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50'}`}>
+                ৳{dueAmount.toFixed(2)}
+              </div>
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label>{t("form.notes")}</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e: any) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      <Button 
-        type="submit" 
-        disabled={loading}
-        className="w-full py-6 text-lg"
-      >
-        {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        {loading ? t("form.creating") : t("form.submit")}
-      </Button>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full py-6 text-lg"
+        >
+          {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          {loading ? t("form.creating") : t("form.submit")}
+        </Button>
 
-    </form>
+      </form>
 
       {/* Inline Add Color Dialog */}
       <Dialog open={isAddColorOpen} onOpenChange={setIsAddColorOpen}>
@@ -583,7 +642,7 @@ export function CreateOrderForm({
                 />
               </div>
               <div className="space-y-2 flex-none w-20">
-                <Label>{newColorType === "multi" ? "Color 1" : "Color"}</Label>
+                <Label>Color Code</Label>
                 <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
                   <input
                     type="color"
@@ -593,29 +652,15 @@ export function CreateOrderForm({
                   />
                 </div>
               </div>
-              {newColorType === "multi" && (
-                <div className="space-y-2 flex-none w-20">
-                  <Label>Color 2</Label>
-                  <div className="flex h-10 w-full items-center rounded-md border border-slate-200 bg-white px-1 py-1 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 dark:border-emerald-800/50 dark:bg-emerald-950/30">
-                    <input
-                      type="color"
-                      value={newColorCode2}
-                      onChange={e => setNewColorCode2(e.target.value)}
-                      className="w-full h-full border-0 p-0 cursor-pointer bg-transparent"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
             <div className="space-y-2">
               <Label>Color Type</Label>
-              <select 
-                value={newColorType} 
+              <select
+                value={newColorType}
                 onChange={(e: any) => setNewColorType(e.target.value)}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-emerald-950/30"
               >
-                <option value="single">Single Print Color</option>
-                <option value="multi">Multi Print Color</option>
+                <option value="single">Print Color</option>
                 <option value="handle">Handle Color</option>
               </select>
             </div>

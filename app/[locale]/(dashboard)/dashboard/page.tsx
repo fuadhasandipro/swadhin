@@ -1,7 +1,8 @@
-import { getDashboardStats, getMonthlyChartData, getLowStockItems, getTopStockItems, getRecentOrders, getOrderStatusBreakdown } from '@/lib/actions/dashboard';
+import { getDashboardStats, getDailyActivityData, getLowStockItems, getTopStockItems, getRecentOrders, getOrderStatusBreakdown } from '@/lib/actions/dashboard';
 import { KPICard } from '@/components/dashboard/KPICard';
-import { MonthlyCashChart } from '@/components/dashboard/MonthlyCashChart';
+import { DailyActivityChart } from '@/components/dashboard/DailyActivityChart';
 import { OrderStatusWidget } from '@/components/dashboard/OrderStatusWidget';
+import { StockInfoWidget } from '@/components/dashboard/StockInfoWidget';
 import { RecentOrdersWidget } from '@/components/dashboard/RecentOrdersWidget';
 import { LowStockBanner } from '@/components/dashboard/LowStockBanner';
 import { ArrowDownToLine, ArrowUpFromLine, Wallet, Users, AlertCircle, Building2, Truck, Activity, PackageCheck } from 'lucide-react';
@@ -15,9 +16,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const t = await getTranslations('dashboard');
   const period = 'month';
 
-  const [stats, chartData, lowStockItems, recentOrders, orderStatusBreakdown] = await Promise.all([
+  const [stats, dailyData, lowStockItems, recentOrders, orderStatusBreakdown] = await Promise.all([
     getDashboardStats(period),
-    getMonthlyChartData(),
+    getDailyActivityData(),
     getLowStockItems(),
     getRecentOrders(),
     getOrderStatusBreakdown()
@@ -46,7 +47,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <KPICard
           title="Cash In Hand"
           value={stats.cashInHand}
@@ -54,15 +55,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           variant="emerald"
           valueColor="text-[#016335] dark:text-emerald-400"
           prefix="৳"
-        />
-        <KPICard
-          title="Monthly Inflow"
-          value={stats.cashIn}
-          icon={<ArrowDownToLine size={20} />}
-          variant="blue"
-          valueColor="text-blue-600 dark:text-blue-400"
-          prefix="৳"
-          subtitle={format(new Date(), "MMM yyyy")}
         />
         <KPICard
           title="They Owe Us"
@@ -81,11 +73,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           prefix="৳"
         />
         <KPICard
+          title="Total Business Value"
+          value={stats.totalBusinessValue}
+          icon={<Building2 size={20} />}
+          variant="amber"
+          valueColor="text-amber-600 dark:text-amber-400"
+          prefix="৳"
+        />
+        <KPICard
           title="Active Orders"
-          value={stats.activeOrders}
+          value={stats.activeOrdersQty}
           icon={<Activity size={20} />}
           variant="emerald"
           valueColor="text-slate-800 dark:text-slate-200"
+          prefix=""
+          suffix=" pcs"
+          subtitle={`${stats.activeOrders} orders | ৳${stats.activeOrdersValue.toLocaleString('en-IN')}`}
         />
         <KPICard
           title="Deliveries Today"
@@ -99,19 +102,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart Section */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 h-fit">
           <CardHeader>
-            <CardTitle className="text-lg">{t('monthlyCashFlow')}</CardTitle>
-            <CardDescription>{t('monthlyCashFlowDesc')}</CardDescription>
+            <CardTitle className="text-lg">Daily Activity (Last 14 Days)</CardTitle>
+            <CardDescription>Orders placed, printed, and handled</CardDescription>
           </CardHeader>
           <CardContent>
-            <MonthlyCashChart data={chartData} />
+            <DailyActivityChart data={dailyData} />
           </CardContent>
         </Card>
 
-        {/* Order Status Breakdown */}
-        <div className="lg:col-span-1">
+        {/* Breakdown Widgets */}
+        <div className="lg:col-span-1 space-y-6">
           <OrderStatusWidget breakdown={orderStatusBreakdown} />
+          <StockInfoWidget 
+            totalQty={stats.totalStockQty} 
+            totalValue={stats.stockValue} 
+            lowStockItems={lowStockItems} 
+          />
         </div>
       </div>
 

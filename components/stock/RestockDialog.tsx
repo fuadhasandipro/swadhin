@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "react-hot-toast";
 
 const restockSchema = z.object({
   add_qty: z.number().int().min(1, "Quantity must be > 0"),
@@ -75,6 +76,7 @@ export function RestockDialog({
         data.description,
         data.cost_per_piece,
       );
+      toast.success("Stock restocked successfully");
       reset();
       onClose();
     } catch (err: any) {

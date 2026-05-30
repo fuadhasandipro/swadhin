@@ -27,12 +27,12 @@ export function KanbanColumn({ status, title, orders, onCardClick }: KanbanColum
   }
 
   return (
-    <div className="flex flex-col shrink-0 w-full md:w-72 bg-slate-50/50 dark:bg-[#0a0f0a]/50 rounded-xl border border-slate-200/50 dark:border-emerald-900/30 min-h-[150px] max-h-[50vh] md:h-full md:max-h-full overflow-hidden transition-colors">
+    <div className="flex flex-col shrink-0 w-[210px] bg-slate-50/50 dark:bg-[#0a0f0a]/50 rounded-xl border border-slate-200/50 dark:border-emerald-900/30 h-full max-h-full overflow-hidden transition-colors">
       
       {/* Column Header */}
-      <div className={`px-4 py-3 border-b backdrop-blur-sm flex justify-between items-center shrink-0 ${headerColor}`}>
-        <h3 className="font-bold text-sm">{title}</h3>
-        <span className="text-xs font-mono font-semibold bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-full">
+      <div className={`px-3 py-2 border-b backdrop-blur-sm flex justify-between items-center shrink-0 ${headerColor}`}>
+        <h3 className="font-bold text-xs">{title}</h3>
+        <span className="text-[10px] font-mono font-semibold bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded-full">
           {orders.length}
         </span>
       </div>
@@ -40,7 +40,7 @@ export function KanbanColumn({ status, title, orders, onCardClick }: KanbanColum
       {/* Scrollable Card Area */}
       <div 
         ref={setNodeRef} 
-        className={`flex-1 overflow-y-auto p-3 transition-colors duration-200 ${isOver ? 'bg-slate-100/50 dark:bg-emerald-900/10' : ''}`}
+        className={`flex-1 overflow-y-auto p-2 transition-colors duration-200 ${isOver ? 'bg-slate-100/50 dark:bg-emerald-900/10' : ''}`}
       >
         {orders.map(order => (
           <KanbanCard 

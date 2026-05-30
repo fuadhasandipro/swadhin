@@ -12,7 +12,7 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['192.168.1.20', '172.178.0.105', 'local-ip.co', '*.local-ip.co'],
+  allowedDevOrigins: ['192.168.243.1', '172.178.0.105', 'local-ip.co', '*.local-ip.co'],
 };
 
 export default withPWA(withNextIntl(nextConfig));

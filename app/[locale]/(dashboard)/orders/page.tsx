@@ -14,15 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Eye, TrendingUp, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus, Search, Eye, TrendingUp, CheckCircle2, Clock, XCircle, Palette } from "lucide-react";
 import { OrderFilters } from "@/components/orders/OrderFilters";
+import { OrderStatusUpdate } from "@/components/orders/OrderStatusUpdate";
 import { createClient } from "@/lib/supabase/server";
 import { getColorHex } from "@/lib/utils/colors";
 
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; tab?: string; sort?: string; cut?: string; bodyColor?: string; handleColor?: string; printColor?: string }>;
+  searchParams: Promise<{ search?: string; tab?: string; sort?: string; cut?: string; bodyColor?: string; handleColor?: string; printColor?: string; size?: string }>;
 }) {
   const params = await searchParams;
   const t = await getTranslations("orders");
@@ -32,10 +33,24 @@ export default async function OrdersPage({
   const supabase = await createClient();
   const { data: colorConfigs } = await supabase.from('print_color_configs').select('*');
 
-  // Extract unique colors for filtering before applying filters
+  // Extract unique colors and sizes for filtering before applying filters
   const uniqueBodyColors = Array.from(new Set(orders.map((o: any) => o.body_color).filter(Boolean))) as string[];
   const uniqueHandleColors = Array.from(new Set(orders.map((o: any) => o.handle_color).filter(Boolean))) as string[];
-  const uniquePrintColors = Array.from(new Set(orders.map((o: any) => o.print_color_config?.color || o.print_color_config?.name).filter(Boolean))) as string[];
+  const uniqueSizes = Array.from(new Set(orders.map((o: any) => o.product?.bag_size).filter(Boolean))) as string[];
+
+  // Extract distinct individual print colors
+  const printColorsSet = new Set<string>();
+  orders.forEach((o: any) => {
+    const pColor = o.print_color_config?.color || o.print_color_config?.name;
+    if (pColor) {
+      if (pColor.includes('-')) {
+        pColor.split('-').forEach((c: string) => printColorsSet.add(c.trim()));
+      } else {
+        printColorsSet.add(pColor.trim());
+      }
+    }
+  });
+  const uniquePrintColors = Array.from(printColorsSet);
 
   // Fetch monthly stats
   const today = new Date();
@@ -60,7 +75,10 @@ export default async function OrdersPage({
     orders = orders.filter((o: any) => o.handle_color === params.handleColor);
   }
   if (params.printColor && params.printColor !== "all") {
-    orders = orders.filter((o: any) => (o.print_color_config?.color || o.print_color_config?.name) === params.printColor);
+    orders = orders.filter((o: any) => {
+      const pColor = o.print_color_config?.color || o.print_color_config?.name || "";
+      return pColor.includes(params.printColor as string);
+    });
   }
 
   // Apply Client-side filtering for Cut Type
@@ -68,16 +86,52 @@ export default async function OrdersPage({
     orders = orders.filter((o: any) => o.cutting_type === params.cut);
   }
 
+  // Apply Client-side filtering for Size
+  if (params.size && params.size !== "all") {
+    orders = orders.filter((o: any) => o.product?.bag_size === params.size);
+  }
+
   // Apply Client-side sorting
   if (params.sort) {
     if (params.sort === "date_asc") {
       orders.sort((a: any, b: any) => new Date(a.order_date).getTime() - new Date(b.order_date).getTime());
+    } else if (params.sort === "date_desc") {
+      orders.sort((a: any, b: any) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime());
+    } else if (params.sort === "total_asc") {
+      orders.sort((a: any, b: any) => a.total_amount - b.total_amount);
     } else if (params.sort === "total_desc") {
       orders.sort((a: any, b: any) => b.total_amount - a.total_amount);
+    } else if (params.sort === "qty_asc") {
+      orders.sort((a: any, b: any) => a.qty - b.qty);
     } else if (params.sort === "qty_desc") {
       orders.sort((a: any, b: any) => b.qty - a.qty);
+    } else if (params.sort === "delivery_asc") {
+      orders.sort((a: any, b: any) => new Date(a.delivery_date).getTime() - new Date(b.delivery_date).getTime());
+    } else if (params.sort === "delivery_desc") {
+      orders.sort((a: any, b: any) => new Date(b.delivery_date).getTime() - new Date(a.delivery_date).getTime());
+    } else if (params.sort === "rate_asc") {
+      orders.sort((a: any, b: any) => a.rate_per_piece - b.rate_per_piece);
+    } else if (params.sort === "rate_desc") {
+      orders.sort((a: any, b: any) => b.rate_per_piece - a.rate_per_piece);
     }
   }
+
+  const createSortLink = (field: string) => {
+    let newSort = `${field}_desc`;
+    if (params.sort === `${field}_desc`) newSort = `${field}_asc`;
+    
+    const p = new URLSearchParams();
+    if (currentTab !== "all") p.set("tab", currentTab);
+    if (params.search) p.set("search", params.search);
+    if (params.cut && params.cut !== "all") p.set("cut", params.cut);
+    if (params.bodyColor && params.bodyColor !== "all") p.set("bodyColor", params.bodyColor);
+    if (params.handleColor && params.handleColor !== "all") p.set("handleColor", params.handleColor);
+    if (params.printColor && params.printColor !== "all") p.set("printColor", params.printColor);
+    if (params.size && params.size !== "all") p.set("size", params.size);
+    p.set("sort", newSort);
+    
+    return `/orders?${p.toString()}`;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -220,11 +274,10 @@ export default async function OrdersPage({
                   <Link
                     key={tab}
                     href={`/orders?tab=${tab}${params.search ? `&search=${params.search}` : ""}${params.sort ? `&sort=${params.sort}` : ""}${params.cut ? `&cut=${params.cut}` : ""}`}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                      currentTab === tab
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${currentTab === tab
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {t(`tabs.${tab}`)}
                   </Link>
@@ -235,6 +288,7 @@ export default async function OrdersPage({
                 <input type="hidden" name="tab" value={currentTab} />
                 <input type="hidden" name="sort" value={params.sort || ""} />
                 <input type="hidden" name="cut" value={params.cut || ""} />
+                <input type="hidden" name="size" value={params.size || ""} />
                 <input type="hidden" name="bodyColor" value={params.bodyColor || ""} />
                 <input type="hidden" name="handleColor" value={params.handleColor || ""} />
                 <input type="hidden" name="printColor" value={params.printColor || ""} />
@@ -255,18 +309,50 @@ export default async function OrdersPage({
             </div>
 
             {/* Bottom Row: Filters & Sorting */}
-            <OrderFilters 
-              currentTab={currentTab} 
-              currentSearch={params.search || ""} 
-              currentCut={params.cut || ""} 
-              currentSort={params.sort || ""} 
+            <OrderFilters
+              currentTab={currentTab}
+              currentSearch={params.search || ""}
+              currentCut={params.cut || ""}
+              currentSort={params.sort || ""}
               currentBodyColor={params.bodyColor || ""}
               currentHandleColor={params.handleColor || ""}
-              currentPrintColor={params.printColor || ""}
+              currentSize={params.size || ""}
               uniqueBodyColors={uniqueBodyColors}
               uniqueHandleColors={uniqueHandleColors}
-              uniquePrintColors={uniquePrintColors}
+              uniqueSizes={uniqueSizes}
             />
+
+            {/* Print Color Tags */}
+            {uniquePrintColors.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="text-sm text-muted-foreground font-medium flex items-center gap-1.5">
+                  <Palette size={14} /> Print Colors:
+                </span>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none w-full sm:w-auto">
+                  {uniquePrintColors.map(color => (
+                    <Link
+                      key={color}
+                      href={`/orders?${new URLSearchParams({
+                        ...(currentTab !== "all" && { tab: currentTab }),
+                        ...(params.search && { search: params.search }),
+                        ...(params.sort && { sort: params.sort }),
+                        ...(params.cut && params.cut !== "all" && { cut: params.cut }),
+                        ...(params.size && params.size !== "all" && { size: params.size }),
+                        ...(params.bodyColor && params.bodyColor !== "all" && { bodyColor: params.bodyColor }),
+                        ...(params.handleColor && params.handleColor !== "all" && { handleColor: params.handleColor }),
+                        ...(params.printColor !== color && { printColor: color }), // Toggle off if clicked again
+                      }).toString()}`}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border flex items-center gap-1.5 ${params.printColor === color
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}
+                    >
+                      {renderColorBox(color)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {orders.length === 0 ? (
@@ -280,7 +366,7 @@ export default async function OrdersPage({
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Date</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider"><Link href={createSortLink('date')} className="hover:text-emerald-600 flex items-center gap-1">Date {params.sort === 'date_asc' ? '↑' : params.sort === 'date_desc' ? '↓' : ''}</Link></TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Customer</TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-center">Size</TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-center">Cut</TableHead>
@@ -288,11 +374,11 @@ export default async function OrdersPage({
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Body Color</TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Handle</TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Print Color</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right">Qty</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right">Rate</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right">Total</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right"><Link href={createSortLink('qty')} className="hover:text-emerald-600 flex justify-end items-center gap-1">Qty {params.sort === 'qty_asc' ? '↑' : params.sort === 'qty_desc' ? '↓' : ''}</Link></TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right"><Link href={createSortLink('rate')} className="hover:text-emerald-600 flex justify-end items-center gap-1">Rate {params.sort === 'rate_asc' ? '↑' : params.sort === 'rate_desc' ? '↓' : ''}</Link></TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-right"><Link href={createSortLink('total')} className="hover:text-emerald-600 flex justify-end items-center gap-1">Total {params.sort === 'total_asc' ? '↑' : params.sort === 'total_desc' ? '↓' : ''}</Link></TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-center">Status</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider">Delivery</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider"><Link href={createSortLink('delivery')} className="hover:text-emerald-600 flex items-center gap-1">Delivery {params.sort === 'delivery_asc' ? '↑' : params.sort === 'delivery_desc' ? '↓' : ''}</Link></TableHead>
                       <TableHead className="font-semibold whitespace-nowrap px-3 text-xs uppercase tracking-wider text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -335,9 +421,7 @@ export default async function OrdersPage({
                           ৳{Number(order.total_amount).toLocaleString()}
                         </TableCell>
                         <TableCell className="px-3 text-center whitespace-nowrap">
-                          <Link href={`/orders/${order.id}`}>
-                            {getStatusBadge(order.status)}
-                          </Link>
+                          <OrderStatusUpdate compact orderId={order.id} currentStatus={order.status} />
                         </TableCell>
                         <TableCell className="px-3 text-xs whitespace-nowrap text-slate-500 font-medium">
                           {format(new Date(order.delivery_date), "dd MMM yy")}
@@ -378,29 +462,29 @@ export default async function OrdersPage({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="bg-slate-50 dark:bg-emerald-950/20 rounded-lg p-3 text-xs grid grid-cols-2 gap-x-2 gap-y-2 text-slate-700 dark:text-emerald-200/80 border border-slate-100 dark:border-emerald-900/30">
                         <div className="flex items-center justify-between"><span className="text-slate-400">Size:</span> <span className="font-medium">{order.product?.bag_size || '-'}</span></div>
                         <div className="flex items-center justify-between"><span className="text-slate-400">GSM:</span> <span className="font-medium">{order.gsm}</span></div>
                         <div className="flex items-center justify-between"><span className="text-slate-400">Cut:</span> <span className="font-medium capitalize">{order.cutting_type}</span></div>
                         <div className="flex items-center justify-between"><span className="text-slate-400">Qty:</span> <span className="font-medium">{Number(order.qty).toLocaleString()}</span></div>
-                        
+
                         <div className="col-span-2 pt-2 mt-1 border-t border-slate-200/50 dark:border-emerald-900/30 flex justify-between items-center">
-                          <span className="text-slate-400">Body Color:</span> 
+                          <span className="text-slate-400">Body Color:</span>
                           {renderColorBox(order.body_color)}
                         </div>
                         {order.cutting_type === 'handle' && (
                           <div className="col-span-2 flex justify-between items-center">
-                            <span className="text-slate-400">Handle Color:</span> 
+                            <span className="text-slate-400">Handle Color:</span>
                             {renderColorBox(order.handle_color)}
                           </div>
                         )}
                         <div className="col-span-2 flex justify-between items-center">
-                          <span className="text-slate-400">Print Color:</span> 
+                          <span className="text-slate-400">Print Color:</span>
                           {renderPrintColor(order.print_color_config)}
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-between items-end mt-1">
                         <div className="text-xs text-slate-500">Rate: ৳{Number(order.rate_per_piece).toFixed(2)}</div>
                         <div>

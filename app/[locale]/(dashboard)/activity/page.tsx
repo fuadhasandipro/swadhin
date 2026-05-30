@@ -30,7 +30,7 @@ export default async function ActivityPage() {
   const isAdmin = profile.role === 'admin';
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="mb-8">
         <h1 className="text-3xl md:text-4xl font-heading font-bold text-emerald-950 dark:text-emerald-50 mb-2 tracking-tight">
           অ্যাক্টিভিটি লগ

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { startOfDay, startOfMonth, format, subMonths } from "date-fns";
+import { startOfDay, startOfMonth, format, subMonths, subDays } from "date-fns";
 
 const getCachedStats =
   async (period: 'today' | 'month') => {
@@ -69,9 +69,11 @@ const getCachedStats =
       .select('qty, cost_per_piece');
 
     let stockValue = 0;
+    let totalStockQty = 0;
     if (products) {
       products.forEach(p => {
         stockValue += (Number(p.qty) * Number(p.cost_per_piece));
+        totalStockQty += Number(p.qty);
       });
     }
 
@@ -94,10 +96,22 @@ const getCachedStats =
     const weOweThem = weOweCustomers + supplierDues;
 
     // Active Orders (Not delivered or canceled)
-    const { count: activeOrdersCount } = await supabase
+    const { data: activeOrders } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
+      .select('qty, total_amount')
       .not('status', 'in', '("delivered","canceled")');
+
+    let activeOrdersCount = 0;
+    let activeOrdersQty = 0;
+    let activeOrdersValue = 0;
+
+    if (activeOrders) {
+      activeOrdersCount = activeOrders.length;
+      activeOrders.forEach(o => {
+        activeOrdersQty += Number(o.qty);
+        activeOrdersValue += Number(o.total_amount);
+      });
+    }
 
     // Deliveries Today (using the exact same logic as getDeliverySchedule)
     const todayStr = new Date().toISOString().split('T')[0];
@@ -114,7 +128,11 @@ const getCachedStats =
       totalDueFromCustomers,
       weOweThem,
       totalBusinessValue,
-      activeOrders: activeOrdersCount || 0,
+      stockValue,
+      totalStockQty,
+      activeOrders: activeOrdersCount,
+      activeOrdersQty,
+      activeOrdersValue,
       deliveriesToday: deliveriesTodayCount || 0
     };
   };
@@ -123,39 +141,58 @@ export async function getDashboardStats(period: 'today' | 'month' = 'today') {
   return getCachedStats(period);
 }
 
-export async function getMonthlyChartData() {
+export async function getDailyActivityData() {
   const supabase = await createClient();
 
-  const sixMonthsAgo = subMonths(startOfMonth(new Date()), 5); // include current month = 6 months
+  const fourteenDaysAgo = subDays(startOfDay(new Date()), 13); // 14 days including today
 
-  const { data: transactions } = await supabase
-    .from('cash_transactions')
-    .select('type, amount, created_at')
-    .gte('created_at', sixMonthsAgo.toISOString());
+  const { data: logs } = await supabase
+    .from('activity_logs')
+    .select('action, details, created_at, entity_type, entity_id')
+    .gte('created_at', fourteenDaysAgo.toISOString());
 
-  // Aggregate by month (e.g. "Jan", "Feb")
-  const monthlyData: Record<string, { name: string, income: number, expense: number }> = {};
-
-  // Initialize last 6 months
-  for (let i = 5; i >= 0; i--) {
-    const d = subMonths(new Date(), i);
-    const monthKey = format(d, 'MMM-yy');
-    monthlyData[monthKey] = { name: monthKey, income: 0, expense: 0 };
+  // Fetch quantities for the orders in these logs
+  const orderIds = Array.from(new Set(logs?.filter(l => l.entity_type === 'orders' && l.entity_id).map(l => l.entity_id) || []));
+  const orderQtyMap: Record<string, number> = {};
+  
+  if (orderIds.length > 0) {
+    const { data: orders } = await supabase.from('orders').select('id, qty').in('id', orderIds);
+    if (orders) {
+      orders.forEach(o => {
+        orderQtyMap[o.id] = Number(o.qty);
+      });
+    }
   }
 
-  if (transactions) {
-    transactions.forEach(t => {
-      const date = new Date(t.created_at);
-      const monthKey = format(date, 'MMM-yy');
+  const dailyData: Record<string, { date: string, orders: number, prints: number, handles: number }> = {};
 
-      if (monthlyData[monthKey]) {
-        if (t.type === 'in') monthlyData[monthKey].income += Number(t.amount);
-        if (t.type === 'out') monthlyData[monthKey].expense += Number(t.amount);
+  for (let i = 13; i >= 0; i--) {
+    const d = subDays(new Date(), i);
+    const dateKey = format(d, 'MMM dd');
+    dailyData[dateKey] = { date: dateKey, orders: 0, prints: 0, handles: 0 };
+  }
+
+  if (logs) {
+    logs.forEach(log => {
+      const dateKey = format(new Date(log.created_at), 'MMM dd');
+      const qty = (log.entity_type === 'orders' && log.entity_id) ? (orderQtyMap[log.entity_id] || 0) : 0;
+      
+      if (dailyData[dateKey] && qty > 0) {
+        if (log.action === 'CREATE_ORDER') {
+          dailyData[dateKey].orders += qty;
+        } else if (log.action === 'UPDATE_STATUS') {
+          const status = log.details?.status;
+          if (status === 'one_color_done' || status === 'two_color_done') {
+            dailyData[dateKey].prints += qty;
+          } else if (status === 'handle_done') {
+            dailyData[dateKey].handles += qty;
+          }
+        }
       }
     });
   }
 
-  return Object.values(monthlyData);
+  return Object.values(dailyData);
 }
 
 export async function getLowStockItems() {
@@ -163,10 +200,8 @@ export async function getLowStockItems() {
   const { data } = await supabase
     .from('products')
     .select('*')
-    .lt('stock_quantity', 10); // Wait, schema uses qty or stock_quantity? Schema says `qty`? Let me check types/index.ts
-  // Wait, in Chunk 1 types/index.ts: `qty: number;`. In 001_initial_schema.sql it's `qty` or `stock_quantity`?
-  // Let's use qty. Wait, earlier I used `lt('stock_quantity', 10)` in NotificationsPanel! 
-  // I need to verify what field is actually in the db schema.
+    .lt('qty', 10);
+  
   return data || [];
 }
 

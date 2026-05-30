@@ -18,7 +18,13 @@ export async function loginAction(phone: string, pass: string) {
     return { error: "ফোন নম্বর বা পাসওয়ার্ড ভুল" };
   }
 
-  return { success: true, user: data.user };
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('user_id', data.user.id)
+    .single();
+
+  return { success: true, user: data.user, role: profile?.role };
 }
 
 export async function logoutAction() {

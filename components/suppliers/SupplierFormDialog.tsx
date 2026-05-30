@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { toast } from "react-hot-toast";
 
 const supplierSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -50,8 +51,10 @@ export function SupplierFormDialog({
       const payload = { ...data, balance: data.balance || 0 };
       if (supplier) {
         await updateSupplier(supplier.id, payload);
+        toast.success("Supplier updated successfully");
       } else {
         await createSupplier(payload);
+        toast.success("Supplier added successfully");
       }
       reset();
       onClose();

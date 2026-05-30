@@ -94,6 +94,7 @@ export interface Order {
   rate_per_piece: number;
   qty: number;
   total_amount: number;
+  paid_amount: number;
   notes: string | null;
   created_at: string;
   updated_at: string;

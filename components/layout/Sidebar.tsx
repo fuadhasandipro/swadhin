@@ -38,6 +38,7 @@ const navGroups = [
       { href: '/customers', label: 'Customers', icon: Users, id: 'customers' },
       { href: '/stock', label: 'Stock', icon: Layers, id: 'stock' },
       { href: '/deliveries', label: 'Delivery', icon: Send, id: 'deliveries' },
+      { href: '/cash-collection', label: 'Cash Collection', icon: Banknote, id: 'cash_collection' },
     ]
   },
   {
@@ -87,29 +88,16 @@ export function Sidebar() {
   }
 
   const isVisible = (id: string) => {
-    if (role === 'admin') return true;
+    if (role === 'admin') return id !== 'cash_collection';
 
     if (role === 'manager') {
-      const isOrderManager = (Array.isArray(privileges) ? privileges.includes('order_manager') : privileges?.order_manager === true);
-      const isDeliveryManager = (Array.isArray(privileges) ? privileges.includes('delivery_manager') : privileges?.delivery_manager === true);
-
       switch (id) {
-        case 'dashboard':
         case 'orders':
-        case 'kanban':
-        case 'deliveries':
-          return isOrderManager || isDeliveryManager;
         case 'customers':
-        case 'suppliers':
         case 'stock':
-        case 'cash':
+        case 'deliveries':
         case 'cash_collection':
-        case 'reports':
-        case 'activity':
-          return isOrderManager;
-        case 'salary':
-        case 'settings':
-          return false;
+          return true;
         default:
           return false;
       }

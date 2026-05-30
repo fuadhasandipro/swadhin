@@ -27,6 +27,7 @@ const primaryItems = [
   { href: '/orders', label: 'অর্ডার', icon: PackageSearch, id: 'orders' },
   { href: '/stock', label: 'স্টক', icon: Layers, id: 'stock' },
   { href: '/cash', label: 'নগদ', icon: Banknote, id: 'cash' },
+  { href: '/cash-collection', label: 'নগদ সংগ্রহ', icon: Banknote, id: 'cash_collection' },
 ];
 
 const secondaryItems = [
@@ -66,27 +67,16 @@ export function BottomNav() {
   }
 
   const isVisible = (id: string) => {
-    if (role === 'admin') return true;
+    if (role === 'admin') return id !== 'cash_collection';
 
     if (role === 'manager') {
-      const isOrderManager = (Array.isArray(privileges) ? privileges.includes('order_manager') : privileges?.order_manager === true);
-      const isDeliveryManager = (Array.isArray(privileges) ? privileges.includes('delivery_manager') : privileges?.delivery_manager === true);
-
       switch (id) {
-        case 'dashboard':
         case 'orders':
-        case 'kanban':
-          return isOrderManager || isDeliveryManager;
         case 'customers':
-        case 'suppliers':
         case 'stock':
-        case 'cash':
-        case 'reports':
-        case 'activity':
-          return isOrderManager;
-        case 'salary':
-        case 'settings':
-          return false;
+        case 'deliveries':
+        case 'cash_collection':
+          return true;
         default:
           return false;
       }

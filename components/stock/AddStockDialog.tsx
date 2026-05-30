@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "react-hot-toast";
 
 const addStockSchema = z.object({
   bag_size: z.string().regex(/^\d{1,2}x\d{1,2}$/i, "Format must be like 13x15"),
@@ -27,8 +28,8 @@ const addStockSchema = z.object({
 type FormValues = z.infer<typeof addStockSchema>;
 
 const SIZES = ["10x14", "13x15", "14x16", "16x20"];
-const COLORS = ["White", "Green", "Blue", "Red", "Yellow"];
-const GSMS = [70, 80, 90, 100];
+const COLORS = ["White", "Red", "Paste", "Yellow", "Golden", "Blue", "Black"];
+const GSMS = [45, 50, 60, 70, 80, 90];
 
 export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: 
     setError(null);
     try {
       await createProduct({ ...data, bag_size: data.bag_size.toLowerCase() });
+      toast.success("Stock added successfully");
       reset();
       onClose();
     } catch (err: any) {
@@ -62,13 +64,7 @@ export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: 
     onClose();
   };
 
-  const CATEGORIES = [
-    { value: "raw_material", label: "কাঁচামাল (Raw Material / Bags)" },
-    { value: "ink", label: "কালি (Ink)" },
-    { value: "plate", label: "প্লেট (Plate)" },
-    { value: "packaging", label: "প্যাকেজিং (Packaging)" },
-    { value: "other", label: "অন্যান্য (Other)" },
-  ];
+
 
   const currentSize = watch("bag_size");
   const currentColor = watch("bag_color");
@@ -121,17 +117,6 @@ export function AddStockDialog({ isOpen, onClose }: { isOpen: boolean; onClose: 
                   </Button>
                 ))}
               </div>
-            </div>
-
-            {/* Category */}
-            <div className="space-y-2">
-              <Label>ক্যাটাগরি (Category)</Label>
-              <select
-                {...register("category")}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:border-emerald-800/50 dark:bg-[#0a0f0a]"
-              >
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
             </div>
 
             {/* Cutting Type */}

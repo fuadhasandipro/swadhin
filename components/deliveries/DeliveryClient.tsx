@@ -6,27 +6,58 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Truck, Check, MapPin, Phone, Loader2 } from "lucide-react";
+import { Truck, Check, MapPin, Phone, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function DeliveryClient({ initialDeliveries }: { initialDeliveries: any[] }) {
   const [deliveries, setDeliveries] = useState(initialDeliveries);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<any | null>(null);
+
   const totalScheduled = deliveries.length;
   const onTheWay = deliveries.filter(d => d.status === 'on_the_way').length;
 
-  const handleMarkDelivered = async (orderId: string) => {
-    setProcessingId(orderId);
+  const requestMarkDelivered = (order: any) => {
+    setPendingOrderId(order.id);
+    setPendingOrder(order);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelivered = async () => {
+    if (!pendingOrderId) return;
+    const id = pendingOrderId;
+    setConfirmOpen(false);
+    setPendingOrderId(null);
+    setPendingOrder(null);
+
+    setProcessingId(id);
     try {
-      await updateOrderStatus(orderId, 'delivered');
-      toast.success("Order marked as delivered!");
-      setDeliveries(prev => prev.filter(d => d.id !== orderId));
+      await updateOrderStatus(id, 'delivered');
+      toast.success("✅ অর্ডার ডেলিভারড হিসেবে চিহ্নিত করা হয়েছে!");
+      setDeliveries(prev => prev.filter(d => d.id !== id));
     } catch (err: any) {
-      toast.error(err.message || "Failed to update status");
+      toast.error(err.message || "Status update failed");
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmOpen(false);
+    setPendingOrderId(null);
+    setPendingOrder(null);
   };
 
   return (
@@ -106,7 +137,7 @@ export default function DeliveryClient({ initialDeliveries }: { initialDeliverie
                       variant="outline" 
                       size="sm"
                       className="border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:border-emerald-800 dark:text-slate-300 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300 transition-all flex gap-1.5"
-                      onClick={() => handleMarkDelivered(order.id)}
+                      onClick={() => requestMarkDelivered(order)}
                       disabled={processingId === order.id}
                     >
                       {processingId === order.id ? (
@@ -125,6 +156,84 @@ export default function DeliveryClient({ initialDeliveries }: { initialDeliverie
           )}
         </div>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) handleCancelConfirm(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+              ডেলিভারি নিশ্চিত করুন
+            </DialogTitle>
+            <div className="text-slate-600 dark:text-slate-400 pt-1">
+              {pendingOrder && (
+                <div className="mt-2 space-y-2">
+                  <div className="text-sm">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">{pendingOrder.customer?.name}</span> এর অর্ডারটি কি সফলভাবে ডেলিভার হয়েছে?
+                  </div>
+                  <div className="bg-slate-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm space-y-1.5 border border-slate-100 dark:border-emerald-900/40">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">অর্ডার #</span>
+                      <span className="font-mono font-semibold">{pendingOrder.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">পরিমাণ</span>
+                      <span>{pendingOrder.qty} পিস</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">অর্ডার মোট</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200">৳{Number(pendingOrder.total_amount).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">অগ্রিম পরিশোধ</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">৳{Number(pendingOrder.paid_amount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200 dark:border-emerald-900/40 pt-1.5 mt-1">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">এই অর্ডারের বাকি</span>
+                      <span className="font-bold text-red-600 dark:text-red-400">
+                        ৳{(Number(pendingOrder.total_amount) - Number(pendingOrder.paid_amount || 0)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Customer Total Due */}
+                  {pendingOrder.customer?.balance != null && (
+                    <div className={`rounded-lg p-3 text-sm border flex justify-between items-center ${
+                      pendingOrder.customer.balance < 0
+                        ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40'
+                        : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
+                    }`}>
+                      <span className={`font-semibold ${pendingOrder.customer.balance < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                        {pendingOrder.customer.name} এর মোট বকেয়া
+                      </span>
+                      <span className={`font-bold text-lg ${pendingOrder.customer.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        ৳{Math.abs(pendingOrder.customer.balance).toLocaleString('en-IN')}
+                        <span className="text-xs font-normal ml-1">{pendingOrder.customer.balance < 0 ? '(পাবো)' : '(দিব)'}</span>
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-md p-2">
+                    ⚠️ একবার ডেলিভারড করলে কাস্টমারকে SMS পাঠানো হবে।
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleCancelConfirm}>
+              বাতিল
+            </Button>
+            <Button
+              onClick={handleConfirmDelivered}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              হ্যাঁ, ডেলিভারড
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

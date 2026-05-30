@@ -65,15 +65,7 @@ export function KanbanBoard() {
     if (order && order.status !== newStatus) {
       const oldStatus = order.status;
       
-      // Basic client-side validation (backend also validates)
-      if (newStatus !== 'canceled') {
-        const oldIdx = COLUMNS.findIndex(c => c.status === oldStatus);
-        const newIdx = COLUMNS.findIndex(c => c.status === newStatus);
-        if (newIdx <= oldIdx) {
-          toast.error("Status can only move forward");
-          return;
-        }
-      }
+      // Removed forward-only restriction to allow reverse status updates
 
       // Optimistic update
       updateOrderOptimistically(orderId, { status: newStatus });
@@ -143,8 +135,8 @@ export function KanbanBoard() {
 
       {/* Board */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-y-auto md:overflow-y-hidden md:overflow-x-auto pb-4 custom-scrollbar">
-          <div className="flex flex-col md:flex-row gap-4 md:h-full md:w-max px-1">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
+          <div className="flex flex-row gap-2 h-full w-max px-1">
             {COLUMNS.map(col => (
               <KanbanColumn 
                 key={col.status}

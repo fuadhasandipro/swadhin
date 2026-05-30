@@ -1,184 +1,166 @@
 "use client";
 
-import React, { useState } from "react";
-import { format } from "date-fns";
-import { bn } from "date-fns/locale";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React from "react";
+import { format, isToday, isYesterday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { 
+  CheckCircle2, 
+  PlusCircle, 
+  Banknote, 
+  Package, 
+  Settings, 
+  UserPlus, 
+  Trash2, 
+  AlertTriangle,
+  Info
+} from "lucide-react";
 
 const ACTION_MAP: Record<string, string> = {
-  'CREATE_ORDER': 'নতুন অর্ডার তৈরি',
-  'UPDATE_STATUS': 'অর্ডার স্ট্যাটাস আপডেট',
-  'DELETE_ORDER': 'অর্ডার ডিলিট',
-  'ADD_STOCK': 'নতুন স্টক যোগ',
-  'UPDATE_PRODUCT': 'স্টক আপডেট',
-  'RESTOCK_PRODUCT': 'রিস্টক',
-  'DELETE_PRODUCT': 'স্টক ডিলিট',
-  'CASH_TRANSACTION': 'ক্যাশ ট্রানজেকশন',
-  'CREATE_CUSTOMER': 'গ্রাহক তৈরি',
-  'UPDATE_CUSTOMER': 'গ্রাহক আপডেট',
-  'DELETE_CUSTOMER': 'গ্রাহক ডিলিট',
-  'ADJUST_BALANCE': 'ব্যালেন্স অ্যাডজাস্ট',
-  'CASH_COLLECTION': 'নগদ সংগ্রহ',
-  'PAY_SALARY': 'বেতন প্রদান',
-  'CREATE_MANAGER': 'ম্যানেজার তৈরি',
-  'UPDATE_PRIVILEGES': 'প্রিভিলেজ আপডেট',
-  'UPDATE_SALARY': 'বেতন পরিবর্তন',
-  'TOGGLE_USER_STATUS': 'স্ট্যাটাস টগল',
-  'UPDATE_SETTING': 'সেটিংস আপডেট',
-  'CREATE_PRINT_CONFIG': 'প্রিন্ট কালার তৈরি',
-  'TOGGLE_PRINT_CONFIG': 'প্রিন্ট কালার টগল',
-  'SEND_TEST_SMS': 'টেস্ট SMS',
-  'CREATE_EXPENSE_CATEGORY': 'খরচ ক্যাটাগরি তৈরি',
-  'DELETE_EXPENSE_CATEGORY': 'খরচ ক্যাটাগরি ডিলিট',
+  'CREATE_ORDER': 'created new order',
+  'UPDATE_STATUS': 'updated order status',
+  'DELETE_ORDER': 'deleted order',
+  'ADD_STOCK': 'added new stock',
+  'UPDATE_PRODUCT': 'updated stock',
+  'RESTOCK_PRODUCT': 'restocked product',
+  'DELETE_PRODUCT': 'deleted stock',
+  'CASH_TRANSACTION': 'recorded cash transaction',
+  'CREATE_CUSTOMER': 'added new customer',
+  'UPDATE_CUSTOMER': 'updated customer details',
+  'DELETE_CUSTOMER': 'deleted customer',
+  'ADJUST_BALANCE': 'adjusted balance',
+  'CASH_COLLECTION': 'collected cash',
+  'PAY_SALARY': 'paid salary',
+  'CREATE_MANAGER': 'created manager account',
+  'UPDATE_PRIVILEGES': 'updated privileges',
+  'UPDATE_SALARY': 'updated salary',
+  'TOGGLE_USER_STATUS': 'toggled user status',
+  'UPDATE_SETTING': 'updated system settings',
+  'CREATE_PRINT_CONFIG': 'added print color',
+  'TOGGLE_PRINT_CONFIG': 'toggled print color',
+  'SEND_TEST_SMS': 'sent test SMS',
+  'CREATE_EXPENSE_CATEGORY': 'created expense category',
+  'DELETE_EXPENSE_CATEGORY': 'deleted expense category',
+};
+
+const formatActivityTime = (dateStr: string) => {
+  const d = new Date(dateStr);
+  if (isToday(d)) {
+    return `Today ${format(d, "h:mm a")}`;
+  }
+  if (isYesterday(d)) {
+    return `Yesterday ${format(d, "h:mm a")}`;
+  }
+  return format(d, "d MMM h:mm a");
+};
+
+const getRoleName = (profile: any) => {
+  if (!profile) return 'System';
+  if (profile.role === 'admin') return 'Admin';
+  if (profile.role === 'manager') {
+    if (profile.privileges?.includes('delivery_manager') || profile.privileges?.delivery_manager) return 'Delivery Manager';
+    if (profile.privileges?.includes('order_manager') || profile.privileges?.order_manager) return 'Order Manager';
+    if (profile.privileges?.includes('stock_manager') || profile.privileges?.stock_manager) return 'Stock Manager';
+    return 'Manager';
+  }
+  return profile.role || 'User';
+};
+
+const formatStatus = (status: string) => {
+  if (!status) return 'Updated';
+  return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+const formatEntityName = (log: any) => {
+  const d = log.details || {};
+  switch (log.entity_type) {
+    case 'orders': return d.customer_name ? `order for ${d.customer_name}` : `order`;
+    case 'customers': return d.name || d.customer_name ? `customer "${d.name || d.customer_name}"` : `customer`;
+    case 'products': return d.bag_size ? `stock item (${d.bag_size} ${d.color || ''})`.trim() : `stock item`;
+    default: return log.entity_type?.replace(/s$/, '') || 'item'; // Removes trailing 's' for singular (e.g. 'orders' -> 'order')
+  }
+};
+
+const getLogContent = (log: any) => {
+  const role = getRoleName(log.profile);
+  const name = log.profile?.full_name || 'System';
+  const prefix = `<span class="font-semibold text-slate-800 dark:text-emerald-100">${role} ${name !== 'System' ? `(${name})` : ''}</span>`;
+  
+  const d = log.details || {};
+  const entityName = formatEntityName(log);
+  
+  switch(log.action) {
+    case 'CREATE_ORDER':
+      return `${prefix} created new <span class="font-medium text-slate-700 dark:text-emerald-200">${entityName}</span> ${(d.qty || d.order_qty) ? `(${(d.qty || d.order_qty).toLocaleString()} pcs)` : ''}. ${d.sms_sent ? 'SMS sent to customer.' : ''}`.trim();
+    case 'UPDATE_STATUS':
+      return `${prefix} marked <span class="font-medium text-slate-700 dark:text-emerald-200">${entityName}</span> as <span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 px-1.5 py-0.5 rounded text-[11px] font-semibold">${formatStatus(d.new_status || d.status || d.to)}</span>. ${d.sms_sent ? 'SMS sent to customer.' : ''}`.trim();
+    case 'ADD_STOCK':
+      return `${prefix} added ${d.qty?.toLocaleString() || 0} pcs to stock: ${d.bag_size || ''} ${d.color || ''} / ${d.gsm || ''} GSM / ${d.cutting_type || ''} cut.`;
+    case 'RESTOCK_PRODUCT':
+      return `${prefix} restocked ${d.added_qty?.toLocaleString() || d.qty?.toLocaleString() || 0} pcs to stock. New total: ${d.new_qty?.toLocaleString() || 0} pcs.`;
+    case 'CASH_TRANSACTION':
+      return `${prefix} recorded cash ${d.type === 'in' ? 'collection' : 'payment'} of ৳${d.amount?.toLocaleString() || 0} ${d.type === 'in' ? 'from' : 'to'} ${d.customer_name || 'customer'}${d.method ? ` via ${d.method}` : ''}.`;
+    case 'CASH_COLLECTION':
+      return `${prefix} recorded cash collection of ৳${d.amount?.toLocaleString() || 0} from ${d.customer_name || 'customer'}${d.method ? ` via ${d.method}` : ''}.`;
+    case 'CREATE_CUSTOMER':
+      return `${prefix} added new customer "${d.name || ''}".`;
+    case 'ADJUST_BALANCE':
+      return `${prefix} adjusted balance by ৳${d.amount?.toLocaleString() || 0} for ${d.customer_name ? `customer "${d.customer_name}"` : 'customer'}.`;
+    case 'CREATE_MANAGER':
+      return `${prefix} created new manager account "${d.name || ''}".`;
+    case 'UPDATE_SETTING':
+      return `${prefix} updated system settings ${d.setting_name ? `(${d.setting_name})` : ''}.`;
+    case 'DELETE_ORDER':
+      return `${prefix} deleted <span class="font-medium text-slate-700 dark:text-emerald-200">${entityName}</span>.`;
+    default:
+      // Fallback
+      if (log.action?.includes('FLAG') || log.action?.includes('SYSTEM')) {
+        return `<span class="font-semibold text-slate-800 dark:text-emerald-100">System flagged</span> <span class="font-medium text-slate-700 dark:text-emerald-200">${entityName}</span> — ${d.message || d.reason || 'Notice'}.`;
+      }
+      return `${prefix} ${ACTION_MAP[log.action] || log.action.toLowerCase().replace(/_/g, ' ')} for <span class="font-medium text-slate-700 dark:text-emerald-200">${entityName}</span>.`;
+  }
+};
+
+const getLogIcon = (action: string, isSystem: boolean = false) => {
+  if (isSystem || action.includes('FLAG')) return <AlertTriangle className="text-red-500 w-4 h-4" />;
+  if (action.includes('ORDER')) return <PlusCircle className="text-emerald-500 w-4 h-4" />;
+  if (action.includes('STATUS')) return <CheckCircle2 className="text-blue-500 w-4 h-4" />;
+  if (action.includes('STOCK') || action.includes('PRODUCT')) return <Package className="text-amber-500 w-4 h-4" />;
+  if (action.includes('CASH') || action.includes('BALANCE')) return <Banknote className="text-emerald-600 w-4 h-4" />;
+  if (action.includes('CUSTOMER') || action.includes('MANAGER')) return <UserPlus className="text-purple-500 w-4 h-4" />;
+  if (action.includes('SETTING')) return <Settings className="text-slate-500 w-4 h-4" />;
+  if (action.includes('DELETE')) return <Trash2 className="text-red-500 w-4 h-4" />;
+  return <Info className="text-slate-400 w-4 h-4" />;
 };
 
 export function ActivityLogTable({ logs }: { logs: any[] }) {
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  const toggleRow = (id: string) => {
-    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const formatEntityName = (log: any) => {
-    switch (log.entity_type) {
-      case 'orders': return `অর্ডার #${log.entity_id.slice(0, 8)}`;
-      case 'customers': return `গ্রাহক (ID: ${log.entity_id.slice(0, 8)})`;
-      case 'products': return `স্টক (ID: ${log.entity_id.slice(0, 8)})`;
-      default: return log.entity_type;
-    }
-  };
+  if (logs.length === 0) {
+    return <div className="p-8 text-center text-slate-500">No activity logs found.</div>;
+  }
 
   return (
-    <div className="rounded-md border border-emerald-900/10 bg-white overflow-hidden shadow-sm">
-      {/* Mobile View */}
-      <div className="md:hidden divide-y divide-emerald-900/10">
-        {logs.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">কোন লগ পাওয়া যায়নি</div>
-        ) : (
-          logs.map((log) => (
-            <div key={log.id} className="p-4 flex flex-col gap-3 hover:bg-emerald-50/20 transition-colors">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <Badge variant="secondary" className="bg-emerald-100/50 text-emerald-800 mb-2 whitespace-normal text-left">
-                    {ACTION_MAP[log.action] || log.action}
-                  </Badge>
-                  <div className="font-semibold text-slate-800 text-sm">
-                    {formatEntityName(log)}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                  <span className="font-semibold text-slate-800 text-sm">{log.profile?.full_name || 'System'}</span>
-                  {log.profile?.role && (
-                    <Badge variant="outline" className={cn(
-                      "text-[10px] h-4 px-1.5 leading-none py-1",
-                      log.profile.role === 'admin' ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"
-                    )}>
-                      {log.profile.role}
-                    </Badge>
-                  )}
+    <div className="rounded-xl border border-slate-200 dark:border-emerald-900/30 bg-white dark:bg-[#0a0f0a]/50 overflow-hidden shadow-sm">
+      <div className="divide-y divide-slate-100 dark:divide-emerald-900/20">
+        {logs.map((log) => {
+          const isSystem = !log.user_id;
+          return (
+            <div key={log.id} className="p-4 flex gap-4 hover:bg-slate-50 dark:hover:bg-emerald-900/10 transition-colors group">
+              <div className="shrink-0 mt-0.5">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isSystem ? 'bg-red-50 dark:bg-red-950/30' : 'bg-slate-100 dark:bg-emerald-900/20'}`}>
+                  {getLogIcon(log.action, isSystem)}
                 </div>
               </div>
-              <div className="flex justify-between items-center text-xs text-slate-500 pt-2 border-t border-slate-100">
-                <span>{format(new Date(log.created_at), "dd MMM yyyy, hh:mm a", { locale: bn })}</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => toggleRow(log.id)}
-                >
-                  {expandedRows[log.id] ? "কম দেখান" : "বিস্তারিত দেখান"} {expandedRows[log.id] ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />}
-                </Button>
-              </div>
-              {expandedRows[log.id] && (
-                <div className="mt-1 text-xs overflow-x-auto w-full max-w-[calc(100vw-4rem)]">
-                  <pre className="text-slate-600 font-mono bg-slate-100/50 p-3 rounded-md overflow-x-auto whitespace-pre-wrap word-break-all">
-                    {JSON.stringify(log.details, null, 2)}
-                  </pre>
+              <div className="flex-1">
+                <div 
+                  className="text-sm text-slate-700 dark:text-emerald-50/80 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: getLogContent(log) }}
+                />
+                <div className="text-xs text-slate-400 dark:text-emerald-600 mt-1.5 font-medium">
+                  {formatActivityTime(log.created_at)}
                 </div>
-              )}
+              </div>
             </div>
-          ))
-        )}
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden md:block overflow-x-auto w-full">
-        <Table>
-          <TableHeader className="bg-emerald-50/50">
-            <TableRow>
-              <TableHead className="w-10"></TableHead>
-              <TableHead>তারিখ ও সময়</TableHead>
-              <TableHead>ব্যবহারকারী</TableHead>
-              <TableHead>অ্যাকশন</TableHead>
-              <TableHead>এন্টিটি</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-slate-500">
-                  কোন লগ পাওয়া যায়নি
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log) => (
-                <React.Fragment key={`desktop-${log.id}`}>
-                  <TableRow className={cn("hover:bg-emerald-50/30", expandedRows[log.id] && "bg-emerald-50/30")}>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="p-0 h-6 w-6 text-slate-400 hover:text-emerald-600"
-                        onClick={() => toggleRow(log.id)}
-                      >
-                        {expandedRows[log.id] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-700 whitespace-nowrap">
-                      {format(new Date(log.created_at), "dd MMM yyyy, hh:mm a", { locale: bn })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-800">{log.profile?.full_name || 'System'}</span>
-                        {log.profile?.role && (
-                          <Badge variant="outline" className={cn(
-                            "text-[10px] h-5 px-1.5",
-                            log.profile.role === 'admin' ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"
-                          )}>
-                            {log.profile.role}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="bg-emerald-100/50 text-emerald-800 hover:bg-emerald-100">
-                        {ACTION_MAP[log.action] || log.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {formatEntityName(log)}
-                    </TableCell>
-                  </TableRow>
-                  {expandedRows[log.id] && (
-                    <TableRow className="bg-slate-50/50">
-                      <TableCell colSpan={5} className="p-0">
-                        <div className="p-4 border-t border-slate-100 text-sm overflow-x-auto">
-                          <pre className="text-slate-600 font-mono bg-slate-100/50 p-4 rounded-md whitespace-pre-wrap">
-                            {JSON.stringify(log.details, null, 2)}
-                          </pre>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))
-            )}
-          </TableBody>
-        </Table>
+          );
+        })}
       </div>
     </div>
   );
